@@ -4,8 +4,8 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import "https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.11/main.min.css";
-import "https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.11/main.min.css";
+import "@fullcalendar/daygrid/main.css";
+import "@fullcalendar/timegrid/main.css";
 import "./App.css";
 
 const App = () => {
