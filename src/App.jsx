@@ -6,7 +6,9 @@ useEffect(() => { app.initialize().then(() => { app.getContext().then(() => { au
 
 const handleDateClick = (info) => { setNewEvent({ ...newEvent, date: info.dateStr }); setSelectedEventIndex(null); setEditSeries(false); setShowModal(true); };
 
-const handleEventClick = (clickInfo) => { const index = events.findIndex( e => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr ); if (index !== -1) { setNewEvent(events[index]); setSelectedEventIndex(index); setEditSeries(events[index].isRecurring); setShowModal(true); } };
+const handleEventClick = (clickInfo) => { const index = events.findIndex( e => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr ); if (index !== -1) { setNewEvent(events[index]); setSelectedEventIndex(index); setEditSeries(events[index].isRecurring); // default to editing the series setShowModal(true); } };
+
+const handleDeleteEvent = (deleteSeries) => { if (selectedEventIndex === null) return; const eventToDelete = events[selectedEventIndex]; const updatedEvents = events.filter(e => { if (deleteSeries && e.originDate === eventToDelete.originDate) { return false; } else if (!deleteSeries && e !== eventToDelete) { return true; } else if (!deleteSeries && e === eventToDelete) { return false; } return true; }); setEvents(updatedEvents); resetForm(); };
 
 const handleSaveEvent = () => { const { title, notes, date, isRecurring, interval, endDate, color } = newEvent; if (!title || !date) return;
 
@@ -16,9 +18,10 @@ if (selectedEventIndex !== null) {
   const editedEvent = events[selectedEventIndex];
 
   if (editSeries && editedEvent.isRecurring && editedEvent.originDate) {
-    updatedEvents = updatedEvents.filter(
-      e => e.originDate !== editedEvent.originDate
-    );
+    updatedEvents = updatedEvents.filter((e) => {
+      if (e.originDate !== editedEvent.originDate) return true;
+      return new Date(e.date) < new Date(editedEvent.date);
+    });
   } else {
     updatedEvents[selectedEventIndex] = {
       title, notes, date, color,
@@ -123,9 +126,9 @@ return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHei
             />
           </>
         )}
-        {selectedEventIndex !== null && newEvent.isRecurring && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <label style={{ fontSize: 14 }}>Edit full series:</label>
+        {selectedEventIndex !== null && events[selectedEventIndex].isRecurring && (
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 14, marginRight: 8 }}>Edit entire series?</label>
             <input
               type="checkbox"
               checked={editSeries}
@@ -133,8 +136,16 @@ return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHei
             />
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button style={{ padding: '8px 16px', borderRadius: 4, background: '#555', color: '#fff', border: 'none' }} onClick={resetForm}>Cancel</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <button style={{ padding: '8px 16px', borderRadius: 4, background: '#555', color: '#fff', border: 'none' }} onClick={() => setShowModal(false)}>Cancel</button>
+          {selectedEventIndex !== null && (
+            <>
+              <button style={{ padding: '8px 16px', borderRadius: 4, background: '#dc2626', color: '#fff', border: 'none' }} onClick={() => handleDeleteEvent(false)}>Delete Event</button>
+              {events[selectedEventIndex].isRecurring && (
+                <button style={{ padding: '8px 16px', borderRadius: 4, background: '#b91c1c', color: '#fff', border: 'none' }} onClick={() => handleDeleteEvent(true)}>Delete Series</button>
+              )}
+            </>
+          )}
           <button style={{ padding: '8px 16px', borderRadius: 4, background: '#f97316', color: '#fff', border: 'none' }} onClick={handleSaveEvent}>Save</button>
         </div>
       </div>
