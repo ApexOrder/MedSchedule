@@ -1,66 +1,66 @@
 import React, { useEffect, useState } from "react"; import { app, authentication } from "@microsoft/teams-js"; import FullCalendar from "@fullcalendar/react"; import dayGridPlugin from "@fullcalendar/daygrid"; import timeGridPlugin from "@fullcalendar/timegrid"; import interactionPlugin from "@fullcalendar/interaction"; import "./index.css"; import "./App.css";
 
-const App = () => { const [user, setUser] = useState(null); const [events, setEvents] = useState([]); const [showModal, setShowModal] = useState(false); const [selectedEventIndex, setSelectedEventIndex] = useState(null); const [editSeries, setEditSeries] = useState(false); const [newEvent, setNewEvent] = useState({ title: "", notes: "", date: "", isRecurring: false, interval: 7, endDate: "", color: "#f97316" });
+const App = () => { const [user, setUser] = useState(null); const [events, setEvents] = useState([]); const [showModal, setShowModal] = useState(false); const [selectedEventIndex, setSelectedEventIndex] = useState(null); const [editSeries, setEditSeries] = useState(false); const [newEvent, setNewEvent] = useState({ title: "", notes: "", date: "", isRecurring: false, interval: 7, endDate: "", color: "#f97316", originDate: null });
 
 useEffect(() => { app.initialize().then(() => { app.getContext().then(() => { authentication.getAuthToken().then(() => { authentication.getUser().then((u) => setUser(u)); }); }); }); }, []);
 
-const handleDateClick = (info) => { setNewEvent({ ...newEvent, date: info.dateStr }); setSelectedEventIndex(null); setEditSeries(false); setShowModal(true); };
+const handleDateClick = (info) => { setNewEvent({ title: "", notes: "", date: info.dateStr, isRecurring: false, interval: 7, endDate: "", color: "#f97316", originDate: info.dateStr }); setSelectedEventIndex(null); setEditSeries(false); setShowModal(true); };
 
-const handleEventClick = (clickInfo) => { const index = events.findIndex( e => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr ); if (index !== -1) { setNewEvent(events[index]); setSelectedEventIndex(index); setEditSeries(events[index].isRecurring); // default to editing the series setShowModal(true); } };
+const handleEventClick = (clickInfo) => { const event = events.find( (e) => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr ); if (event) { setNewEvent(event); setSelectedEventIndex(events.indexOf(event)); setShowModal(true); } };
 
-const handleDeleteEvent = (deleteSeries) => { if (selectedEventIndex === null) return; const eventToDelete = events[selectedEventIndex]; const updatedEvents = events.filter(e => { if (deleteSeries && e.originDate === eventToDelete.originDate) { return false; } else if (!deleteSeries && e !== eventToDelete) { return true; } else if (!deleteSeries && e === eventToDelete) { return false; } return true; }); setEvents(updatedEvents); resetForm(); };
-
-const handleSaveEvent = () => { const { title, notes, date, isRecurring, interval, endDate, color } = newEvent; if (!title || !date) return;
+const handleSaveEvent = () => { const { title, date, isRecurring, interval, endDate, color, originDate, notes } = newEvent; if (!title || !date) return;
 
 let updatedEvents = [...events];
 
 if (selectedEventIndex !== null) {
-  const editedEvent = events[selectedEventIndex];
-
-  if (editSeries && editedEvent.isRecurring && editedEvent.originDate) {
+  if (editSeries && originDate) {
     updatedEvents = updatedEvents.filter((e) => {
-      if (e.originDate !== editedEvent.originDate) return true;
-      return new Date(e.date) < new Date(editedEvent.date);
+      if (e.originDate !== originDate) return true;
+      return new Date(e.date) < new Date(date);
     });
+
+    let start = new Date(date);
+    const end = new Date(endDate);
+    while (start <= end) {
+      updatedEvents.push({ title, notes, date: start.toISOString().split("T")[0], color, originDate });
+      start.setDate(start.getDate() + parseInt(interval));
+    }
   } else {
-    updatedEvents[selectedEventIndex] = {
-      title, notes, date, color,
-      ...(editedEvent.isRecurring && editedEvent.originDate && { isRecurring: false })
-    };
-    setEvents(updatedEvents);
-    resetForm();
-    return;
-  }
-}
-
-if (isRecurring && endDate) {
-  const recurrenceStart = new Date(date);
-  const recurrenceEnd = new Date(endDate);
-  let current = new Date(recurrenceStart);
-
-  while (current <= recurrenceEnd) {
-    updatedEvents.push({
-      title,
-      notes,
-      date: current.toISOString().split("T")[0],
-      color,
-      isRecurring,
-      interval,
-      endDate,
-      originDate: date
-    });
-    current.setDate(current.getDate() + parseInt(interval));
+    updatedEvents[selectedEventIndex] = { ...newEvent };
   }
 } else {
-  updatedEvents.push({ title, notes, date, color });
+  if (isRecurring && endDate) {
+    let start = new Date(date);
+    const end = new Date(endDate);
+    while (start <= end) {
+      updatedEvents.push({ title, notes, date: start.toISOString().split("T")[0], color, originDate: date });
+      start.setDate(start.getDate() + parseInt(interval));
+    }
+  } else {
+    updatedEvents.push({ ...newEvent, originDate: date });
+  }
 }
 
 setEvents(updatedEvents);
-resetForm();
+setShowModal(false);
+setSelectedEventIndex(null);
+setEditSeries(false);
+setNewEvent({
+  title: "",
+  notes: "",
+  date: "",
+  isRecurring: false,
+  interval: 7,
+  endDate: "",
+  color: "#f97316",
+  originDate: null
+});
 
 };
 
-const resetForm = () => { setShowModal(false); setNewEvent({ title: "", notes: "", date: "", isRecurring: false, interval: 7, endDate: "", color: "#f97316" }); setSelectedEventIndex(null); setEditSeries(false); };
+const deleteEvent = () => { if (selectedEventIndex !== null) { const updated = events.filter((_, idx) => idx !== selectedEventIndex); setEvents(updated); setShowModal(false); } };
+
+const deleteSeries = () => { if (newEvent.originDate) { const updated = events.filter((e) => e.originDate !== newEvent.originDate); setEvents(updated); setShowModal(false); } };
 
 return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHeight: '100vh' }}> <h2 style={{ color: '#f97316', fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>Care Calendar</h2>
 
@@ -126,9 +126,9 @@ return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHei
             />
           </>
         )}
-        {selectedEventIndex !== null && events[selectedEventIndex].isRecurring && (
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 14, marginRight: 8 }}>Edit entire series?</label>
+        {selectedEventIndex !== null && newEvent.originDate && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <label style={{ fontSize: 14 }}>Edit entire series:</label>
             <input
               type="checkbox"
               checked={editSeries}
@@ -136,17 +136,19 @@ return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHei
             />
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-          <button style={{ padding: '8px 16px', borderRadius: 4, background: '#555', color: '#fff', border: 'none' }} onClick={() => setShowModal(false)}>Cancel</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 16 }}>
           {selectedEventIndex !== null && (
             <>
-              <button style={{ padding: '8px 16px', borderRadius: 4, background: '#dc2626', color: '#fff', border: 'none' }} onClick={() => handleDeleteEvent(false)}>Delete Event</button>
-              {events[selectedEventIndex].isRecurring && (
-                <button style={{ padding: '8px 16px', borderRadius: 4, background: '#b91c1c', color: '#fff', border: 'none' }} onClick={() => handleDeleteEvent(true)}>Delete Series</button>
+              <button style={{ padding: '8px 12px', borderRadius: 4, background: '#a00', color: '#fff', border: 'none' }} onClick={deleteEvent}>Delete Event</button>
+              {newEvent.originDate && (
+                <button style={{ padding: '8px 12px', borderRadius: 4, background: '#a00', color: '#fff', border: 'none' }} onClick={deleteSeries}>Delete Series</button>
               )}
             </>
           )}
-          <button style={{ padding: '8px 16px', borderRadius: 4, background: '#f97316', color: '#fff', border: 'none' }} onClick={handleSaveEvent}>Save</button>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button style={{ padding: '8px 16px', borderRadius: 4, background: '#555', color: '#fff', border: 'none' }} onClick={() => setShowModal(false)}>Cancel</button>
+            <button style={{ padding: '8px 16px', borderRadius: 4, background: '#f97316', color: '#fff', border: 'none' }} onClick={handleSaveEvent}>Save</button>
+          </div>
         </div>
       </div>
     </div>
