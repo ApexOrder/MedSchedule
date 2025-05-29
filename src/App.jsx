@@ -6,18 +6,27 @@ useEffect(() => { app.initialize().then(() => { app.getContext().then(() => { au
 
 const handleDateClick = (info) => { setNewEvent({ ...newEvent, date: info.dateStr }); setSelectedEventIndex(null); setEditSeries(false); setShowModal(true); };
 
-const handleEventClick = (clickInfo) => { const index = events.findIndex(e => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr); if (index !== -1) { setNewEvent(events[index]); setSelectedEventIndex(index); setEditSeries(false); setShowModal(true); } };
+const handleEventClick = (clickInfo) => { const index = events.findIndex( e => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr ); if (index !== -1) { setNewEvent(events[index]); setSelectedEventIndex(index); setEditSeries(events[index].isRecurring); setShowModal(true); } };
 
-const handleSaveEvent = () => { const { title, date, isRecurring, interval, endDate, color } = newEvent; if (!title || !date) return;
+const handleSaveEvent = () => { const { title, notes, date, isRecurring, interval, endDate, color } = newEvent; if (!title || !date) return;
 
 let updatedEvents = [...events];
 
 if (selectedEventIndex !== null) {
   const editedEvent = events[selectedEventIndex];
+
   if (editSeries && editedEvent.isRecurring && editedEvent.originDate) {
-    updatedEvents = updatedEvents.filter(e => e.originDate !== editedEvent.originDate);
+    updatedEvents = updatedEvents.filter(
+      e => e.originDate !== editedEvent.originDate
+    );
   } else {
-    updatedEvents.splice(selectedEventIndex, 1);
+    updatedEvents[selectedEventIndex] = {
+      title, notes, date, color,
+      ...(editedEvent.isRecurring && editedEvent.originDate && { isRecurring: false })
+    };
+    setEvents(updatedEvents);
+    resetForm();
+    return;
   }
 }
 
@@ -29,6 +38,7 @@ if (isRecurring && endDate) {
   while (current <= recurrenceEnd) {
     updatedEvents.push({
       title,
+      notes,
       date: current.toISOString().split("T")[0],
       color,
       isRecurring,
@@ -39,16 +49,15 @@ if (isRecurring && endDate) {
     current.setDate(current.getDate() + parseInt(interval));
   }
 } else {
-  updatedEvents.push({ title, date, color });
+  updatedEvents.push({ title, notes, date, color });
 }
 
 setEvents(updatedEvents);
-setShowModal(false);
-setNewEvent({ title: "", notes: "", date: "", isRecurring: false, interval: 7, endDate: "", color: "#f97316" });
-setSelectedEventIndex(null);
-setEditSeries(false);
+resetForm();
 
 };
+
+const resetForm = () => { setShowModal(false); setNewEvent({ title: "", notes: "", date: "", isRecurring: false, interval: 7, endDate: "", color: "#f97316" }); setSelectedEventIndex(null); setEditSeries(false); };
 
 return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHeight: '100vh' }}> <h2 style={{ color: '#f97316', fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>Care Calendar</h2>
 
@@ -114,9 +123,9 @@ return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHei
             />
           </>
         )}
-        {selectedEventIndex !== null && events[selectedEventIndex]?.isRecurring && (
+        {selectedEventIndex !== null && newEvent.isRecurring && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <label style={{ fontSize: 14 }}>Edit series:</label>
+            <label style={{ fontSize: 14 }}>Edit full series:</label>
             <input
               type="checkbox"
               checked={editSeries}
@@ -125,7 +134,7 @@ return ( <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHei
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button style={{ padding: '8px 16px', borderRadius: 4, background: '#555', color: '#fff', border: 'none' }} onClick={() => setShowModal(false)}>Cancel</button>
+          <button style={{ padding: '8px 16px', borderRadius: 4, background: '#555', color: '#fff', border: 'none' }} onClick={resetForm}>Cancel</button>
           <button style={{ padding: '8px 16px', borderRadius: 4, background: '#f97316', color: '#fff', border: 'none' }} onClick={handleSaveEvent}>Save</button>
         </div>
       </div>
