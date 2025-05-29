@@ -18,7 +18,7 @@ const App = () => {
     }, []);
 
     const handleDateClick = (info) => {
-        const title = prompt("Enter event title");
+        const title = prompt("Enter event title.");
         if (title) {
             setEvents([...events, { title, date: info.dateStr }]);
         }
