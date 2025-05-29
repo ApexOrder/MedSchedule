@@ -1,30 +1,23 @@
 {
-  "name": "MedSchedule",
+  "name": "med-schedule",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@fullcalendar/daygrid": "^6.1.10",
-    "@fullcalendar/interaction": "^6.1.10",
-    "@fullcalendar/react": "^6.1.10",
-    "@microsoft/teams-js": "^2.16.0",
+    "@fullcalendar/core": "^6.1.11",
+    "@fullcalendar/daygrid": "^6.1.11",
+    "@fullcalendar/timegrid": "^6.1.11",
+    "@fullcalendar/interaction": "^6.1.11",
+    "@fullcalendar/react": "^6.1.11",
+    "@microsoft/teams-js": "^2.13.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
+    "react-dom": "^18.2.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "devDependencies": {
+    "vite": "^5.0.0"
   }
 }
