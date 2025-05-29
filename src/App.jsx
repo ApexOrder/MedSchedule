@@ -3,6 +3,7 @@ import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import "./App.css"; // Ensure this is included
 
 const App = () => {
   const [context, setContext] = useState(null);
@@ -10,17 +11,14 @@ const App = () => {
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    // Initialize Teams SDK
     app.initialize().then(() => {
       app.getContext().then((ctx) => {
         setContext(ctx);
         console.log("✅ Teams context:", ctx);
 
-        // Try to get the authenticated user
         authentication
           .getAuthToken()
           .then((token) => {
-            // Optionally decode JWT token here if needed
             authentication.getUser().then((user) => {
               setUser(user);
               console.log("✅ Authenticated user:", user);
@@ -42,18 +40,10 @@ const App = () => {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Care Calendar</h2>
+    <div className="app-container">
+      <h2 className="app-title">Care Calendar</h2>
 
-      {/* 🔍 Debug label */}
-      <div style={{
-        padding: "10px",
-        marginBottom: "15px",
-        border: "1px solid #ccc",
-        borderRadius: "6px",
-        background: "#f0f0f0",
-        fontFamily: "monospace"
-      }}>
+      <div className="debug-label">
         {user ? (
           <>
             👤 <strong>{user.displayName}</strong> ({user.email})
