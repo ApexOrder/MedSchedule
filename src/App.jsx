@@ -11,6 +11,7 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [selectedEventIndex, setSelectedEventIndex] = useState(null);
   const [newEvent, setNewEvent] = useState({
     title: "",
     notes: "",
@@ -33,29 +34,44 @@ const App = () => {
 
   const handleDateClick = (info) => {
     setNewEvent({ ...newEvent, date: info.dateStr });
+    setSelectedEventIndex(null);
     setShowModal(true);
+  };
+
+  const handleEventClick = (clickInfo) => {
+    const index = events.findIndex(e => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr);
+    if (index !== -1) {
+      setNewEvent(events[index]);
+      setSelectedEventIndex(index);
+      setShowModal(true);
+    }
   };
 
   const handleSaveEvent = () => {
     const { title, date, isRecurring, interval, endDate, color } = newEvent;
     if (!title || !date) return;
 
-    const newEvents = [];
-    let start = new Date(date);
+    const updatedEvents = [...events];
 
-    if (isRecurring && endDate) {
-      const end = new Date(endDate);
-      while (start <= end) {
-        newEvents.push({ title, date: start.toISOString().split("T")[0], color });
-        start.setDate(start.getDate() + parseInt(interval));
-      }
+    if (selectedEventIndex !== null) {
+      updatedEvents[selectedEventIndex] = { ...newEvent };
     } else {
-      newEvents.push({ title, date, color });
+      if (isRecurring && endDate) {
+        let start = new Date(date);
+        const end = new Date(endDate);
+        while (start <= end) {
+          updatedEvents.push({ title, date: start.toISOString().split("T")[0], color });
+          start.setDate(start.getDate() + parseInt(interval));
+        }
+      } else {
+        updatedEvents.push({ title, date, color });
+      }
     }
 
-    setEvents([...events, ...newEvents]);
+    setEvents(updatedEvents);
     setShowModal(false);
     setNewEvent({ title: "", notes: "", date: "", isRecurring: false, interval: 7, endDate: "", color: "#f97316" });
+    setSelectedEventIndex(null);
   };
 
   return (
@@ -76,6 +92,7 @@ const App = () => {
           headerToolbar={{ start: "dayGridMonth,timeGridWeek,timeGridDay", center: "title", end: "prev,next today" }}
           initialView="dayGridMonth"
           dateClick={handleDateClick}
+          eventClick={handleEventClick}
           events={events.map(evt => ({ title: evt.title, start: evt.date, color: evt.color }))}
         />
       </div>
@@ -83,7 +100,7 @@ const App = () => {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
           <div style={{ background: '#2d2d2d', padding: 24, borderRadius: 8, width: '100%', maxWidth: 400 }}>
-            <h3 style={{ fontSize: 18, fontWeight: '600', color: '#f97316', marginBottom: 16 }}>Add Event</h3>
+            <h3 style={{ fontSize: 18, fontWeight: '600', color: '#f97316', marginBottom: 16 }}>{selectedEventIndex !== null ? 'Edit Event' : 'Add Event'}</h3>
             <input
               type="text"
               placeholder="Event Title"
