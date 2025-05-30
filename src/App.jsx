@@ -41,6 +41,25 @@ const App = () => {
 
             authentication.getAuthToken({
   successCallback: (token) => {
+    const tokenParts = token.split(".");
+    if (tokenParts.length === 3) {
+      try {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        const aud = payload.aud || "Not found";
+        const scp = payload.scp || "Not found";
+        const upn = payload.upn || payload.preferred_username || "Not found";
+
+        debug("🪪 Token Debug Info:");
+        debug("- aud: " + aud);
+        debug("- scp: " + scp);
+        debug("- userPrincipalName: " + upn);
+      } catch (e) {
+        debug("❌ Failed to decode token payload.");
+      }
+    } else {
+      debug("❌ Invalid token format.");
+    }
+
     debug("✅ Auth token acquired.");
     debug("🔓 Fetching user from Graph...");
 
@@ -51,7 +70,6 @@ const App = () => {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log("🧾 Graph /me result:", data);
         const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
         const email = data.mail || data.userPrincipalName || "unknown@example.com";
 
@@ -60,8 +78,7 @@ const App = () => {
           email
         });
 
-        debug("✅ User fetched from Graph object:\n" + JSON.stringify(data, null, 2));
-
+        debug("✅ User fetched from Graph: " + name);
       })
       .catch((err) => {
         debug("❌ Graph /me error: " + JSON.stringify(err));
@@ -72,11 +89,6 @@ const App = () => {
   }
 });
 
-          })
-          .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
-      })
-      .catch((err) => debug("❌ app.initialize failed: " + JSON.stringify(err)));
-  }, []);
 
   // All your other logic below remains the same (handleDateClick, handleSaveEvent, etc.)
 
