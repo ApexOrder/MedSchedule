@@ -77,6 +77,7 @@ const App = () => {
   }, []);
 
   const handleDateClick = (info) => {
+    debug("📅 Date clicked: " + info.dateStr);
     const createdAt = new Date().toISOString();
     setNewEvent({
       title: "",
