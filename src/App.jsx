@@ -52,22 +52,26 @@ const App = () => {
             }
 
             fetch("/api/getUser", {
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-})
-  .then((res) => res.json())
-  .then((data) => {
-    setUser({
-      displayName: data.displayName,
-      email: data.email
-    });
-    debug("✅ Custom API user fetched: " + data.displayName);
-  })
-  .catch((err) => {
-    debug("❌ Custom API error: " + JSON.stringify(err));
-  });
-
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                setUser({
+                  displayName: data.displayName,
+                  email: data.email
+                });
+                debug("✅ Custom API user fetched: " + data.displayName);
+              })
+              .catch((err) => {
+                debug("❌ Custom API error: " + JSON.stringify(err));
+              });
+          },
+          failureCallback: (err) => {
+            debug("❌ getAuthToken error: " + JSON.stringify(err));
+          }
+        });
       })
       .catch((err) => debug("\u274c Initialization failed: " + JSON.stringify(err)));
   }, []);
