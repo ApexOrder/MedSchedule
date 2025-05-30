@@ -29,65 +29,72 @@ const App = () => {
   });
 
   useEffect(() => {
-    const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
+  const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
-    debug("🟠 Initializing Microsoft Teams SDK...");
-    app.initialize()
-      .then(() => {
-        debug("🟢 Teams SDK initialized.");
-        app.getContext()
-          .then(() => {
-            debug("🟢 Got Teams context.");
+  debug("🟠 Initializing Microsoft Teams SDK...");
+  app.initialize()
+    .then(() => {
+      debug("🟢 Teams SDK initialized.");
+      app.getContext()
+        .then(() => {
+          debug("🟢 Got Teams context.");
 
-            authentication.getAuthToken({
-  successCallback: (token) => {
-    const tokenParts = token.split(".");
-    if (tokenParts.length === 3) {
-      try {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        const aud = payload.aud || "Not found";
-        const scp = payload.scp || "Not found";
-        const upn = payload.upn || payload.preferred_username || "Not found";
+          authentication.getAuthToken({
+            successCallback: (token) => {
+              // Decode token for debug display
+              const tokenParts = token.split(".");
+              if (tokenParts.length === 3) {
+                try {
+                  const payload = JSON.parse(atob(tokenParts[1]));
+                  const aud = payload.aud || "Not found";
+                  const scp = payload.scp || "Not found";
+                  const upn = payload.upn || payload.preferred_username || "Not found";
 
-        debug("🪪 Token Debug Info:");
-        debug("- aud: " + aud);
-        debug("- scp: " + scp);
-        debug("- userPrincipalName: " + upn);
-      } catch (e) {
-        debug("❌ Failed to decode token payload.");
-      }
-    } else {
-      debug("❌ Invalid token format.");
-    }
+                  debug("🪪 Token Debug Info:");
+                  debug("- aud: " + aud);
+                  debug("- scp: " + scp);
+                  debug("- userPrincipalName: " + upn);
+                } catch (e) {
+                  debug("❌ Failed to decode token payload.");
+                }
+              } else {
+                debug("❌ Invalid token format.");
+              }
 
-    debug("✅ Auth token acquired.");
-    debug("🔓 Fetching user from Graph...");
+              debug("✅ Auth token acquired.");
+              debug("🔓 Fetching user from Graph...");
 
-    fetch("https://graph.microsoft.com/v1.0/me", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+              fetch("https://graph.microsoft.com/v1.0/me", {
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              })
+                .then((res) => res.json())
+                .then((data) => {
+                  const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
+                  const email = data.mail || data.userPrincipalName || "unknown@example.com";
+
+                  setUser({
+                    displayName: name,
+                    email
+                  });
+
+                  debug("✅ User fetched from Graph: " + name);
+                })
+                .catch((err) => {
+                  debug("❌ Graph /me error: " + JSON.stringify(err));
+                });
+            },
+            failureCallback: (err) => {
+              debug("❌ getAuthToken error: " + JSON.stringify(err));
+            }
+          });
+        })
+        .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
     })
-      .then((res) => res.json())
-      .then((data) => {
-        const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
-        const email = data.mail || data.userPrincipalName || "unknown@example.com";
+    .catch((err) => debug("❌ app.initialize failed: " + JSON.stringify(err)));
+}, []);
 
-        setUser({
-          displayName: name,
-          email
-        });
-
-        debug("✅ User fetched from Graph: " + name);
-      })
-      .catch((err) => {
-        debug("❌ Graph /me error: " + JSON.stringify(err));
-      });
-  },
-  failureCallback: (err) => {
-    debug("❌ getAuthToken error: " + JSON.stringify(err));
-  }
-});
 
 
   // All your other logic below remains the same (handleDateClick, handleSaveEvent, etc.)
