@@ -77,24 +77,25 @@ const App = () => {
   }, []);
 
   const handleDateClick = (info) => {
-    const debug("📅 Date clicked: " + info.dateStr);
-    const createdAt = new Date().toISOString();
-    setNewEvent({
-      title: "",
-      notes: "",
-      date: info.dateStr,
-      isRecurring: false,
-      interval: 7,
-      endDate: "",
-      color: "#f97316",
-      createdBy: user?.displayName || "Unknown",
-      createdAt,
-      originDate: info.dateStr
-    });
-    setSelectedEventIndex(null);
-    setShowModal(true);
-    setEditSeries(false);
-  };
+  debug("📅 Date clicked: " + info.dateStr); // ✅ Correct function call
+  const createdAt = new Date().toISOString();
+  setNewEvent({
+    title: "",
+    notes: "",
+    date: info.dateStr,
+    isRecurring: false,
+    interval: 7,
+    endDate: "",
+    color: "#f97316",
+    createdBy: user?.displayName || "Unknown",
+    createdAt,
+    originDate: info.dateStr
+  });
+  setSelectedEventIndex(null);
+  setShowModal(true);
+  setEditSeries(false);
+};
+
 
   const handleEventClick = (clickInfo) => {
     const index = events.findIndex(
