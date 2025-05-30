@@ -4,6 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { v4 as uuidv4 } from "uuid";  // <<<< added for unique IDs
 import "./index.css";
 import "./App.css";
 
@@ -16,6 +17,7 @@ const App = () => {
   const [editMode, setEditMode] = useState("single"); // "single" or "series"
 
   const [newEvent, setNewEvent] = useState({
+    id: null,  // add id here
     title: "",
     notes: "",
     date: "",
@@ -81,6 +83,7 @@ const App = () => {
     debug("📅 Date clicked: " + info.dateStr);
     const createdAt = new Date().toISOString();
     setNewEvent({
+      id: null,
       title: "",
       notes: "",
       date: info.dateStr,
@@ -98,27 +101,26 @@ const App = () => {
   };
 
   const handleEventClick = (clickInfo) => {
-    const index = events.findIndex(
-      (e) => e.title === clickInfo.event.title && e.date === clickInfo.event.startStr
-    );
+    const index = events.findIndex((e) => e.id === clickInfo.event.id);
+    debug(`Event clicked with id: ${clickInfo.event.id} found at index: ${index}`);
     if (index !== -1) {
       setNewEvent(events[index]);
       setSelectedEventIndex(index);
       setShowModal(true);
-      setEditMode("single"); // default to single on open
+      setEditMode("single");
     }
   };
 
   const handleSaveEvent = () => {
-    const { title, date, isRecurring, interval, endDate } = newEvent;
+    const { title, date, isRecurring, interval, endDate, id } = newEvent;
     if (!title || !date) return;
 
     let updatedEvents = [...events];
 
     if (selectedEventIndex !== null) {
       if (editMode === "series" && newEvent.originDate) {
-        // Update all events in series - no deletion, just update properties
-        updatedEvents = updatedEvents.map(e => {
+        // Update all events in series - update properties only, no deletion
+        updatedEvents = updatedEvents.map((e) => {
           if (e.originDate === newEvent.originDate) {
             return {
               ...e,
@@ -139,7 +141,7 @@ const App = () => {
         updatedEvents[selectedEventIndex] = { ...newEvent };
       }
     } else {
-      // New event creation
+      // Creating new events
       if (isRecurring && endDate) {
         let start = new Date(date);
         const end = new Date(endDate);
@@ -147,6 +149,7 @@ const App = () => {
         while (start <= end) {
           updatedEvents.push({
             ...newEvent,
+            id: uuidv4(),
             date: start.toISOString().split("T")[0],
             originDate: date,
             createdBy: user?.displayName || "Unknown",
@@ -157,6 +160,7 @@ const App = () => {
       } else {
         updatedEvents.push({
           ...newEvent,
+          id: uuidv4(),
           createdBy: user?.displayName || "Unknown",
           createdAt: new Date().toISOString(),
         });
@@ -166,6 +170,7 @@ const App = () => {
     setEvents(updatedEvents);
     setShowModal(false);
     setNewEvent({
+      id: null,
       title: "",
       notes: "",
       date: "",
@@ -182,34 +187,33 @@ const App = () => {
   };
 
   const handleDeleteEvent = () => {
-  if (selectedEventIndex === null) {
-    debug("❌ No event selected for deletion.");
-    return;
-  }
-  if (!window.confirm("Are you sure you want to delete this event?")) return;
+    if (selectedEventIndex === null) {
+      debug("❌ No event selected for deletion.");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to delete this event?")) return;
 
-  debug(`🗑️ Deleting event at index ${selectedEventIndex}`);
-  const updatedEvents = events.filter((_, index) => index !== selectedEventIndex);
-  setEvents(updatedEvents);
-  setShowModal(false);
-  setSelectedEventIndex(null);
-};
+    debug(`🗑️ Deleting event at index ${selectedEventIndex}`);
+    const updatedEvents = events.filter((_, index) => index !== selectedEventIndex);
+    setEvents(updatedEvents);
+    setShowModal(false);
+    setSelectedEventIndex(null);
+  };
 
-const handleDeleteSeries = () => {
-  if (selectedEventIndex === null) {
-    debug("❌ No event selected for series deletion.");
-    return;
-  }
-  if (!window.confirm("Are you sure you want to delete the entire series?")) return;
+  const handleDeleteSeries = () => {
+    if (selectedEventIndex === null) {
+      debug("❌ No event selected for series deletion.");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to delete the entire series?")) return;
 
-  const eventToDelete = events[selectedEventIndex];
-  debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
-  const updatedEvents = events.filter(e => e.originDate !== eventToDelete.originDate);
-  setEvents(updatedEvents);
-  setShowModal(false);
-  setSelectedEventIndex(null);
-};
-
+    const eventToDelete = events[selectedEventIndex];
+    debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
+    const updatedEvents = events.filter((e) => e.originDate !== eventToDelete.originDate);
+    setEvents(updatedEvents);
+    setShowModal(false);
+    setSelectedEventIndex(null);
+  };
 
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
@@ -281,7 +285,7 @@ const handleDeleteSeries = () => {
             {/* Edit mode choice only when editing series event */}
             {selectedEventIndex !== null &&
               newEvent.originDate &&
-              events.some((e) => e.originDate === newEvent.originDate && e !== newEvent) && (
+              events.some((e) => e.originDate === newEvent.originDate && e.id !== newEvent.id) && (
                 <div style={{ marginBottom: 10, color: "#fff" }}>
                   <label style={{ marginRight: 12 }}>
                     <input
@@ -406,9 +410,9 @@ const handleDeleteSeries = () => {
               >
                 <button
                   onClick={() => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
-      handleDeleteEvent();
-    }
+                    if (window.confirm("Are you sure you want to delete this event?")) {
+                      handleDeleteEvent();
+                    }
                   }}
                   style={{
                     background: "#ef4444",
@@ -424,9 +428,9 @@ const handleDeleteSeries = () => {
 
                 <button
                   onClick={() => {
-    if (window.confirm("Are you sure you want to delete the entire series?")) {
-      handleDeleteSeries();
-    }
+                    if (window.confirm("Are you sure you want to delete the entire series?")) {
+                      handleDeleteSeries();
+                    }
                   }}
                   style={{
                     background: "#b91c1c",
@@ -455,6 +459,7 @@ const handleDeleteSeries = () => {
           dateClick={handleDateClick}
           eventClick={handleEventClick}
           events={events.map((evt) => ({
+            id: evt.id,
             title: evt.title,
             start: evt.date,
             color: evt.color,
