@@ -40,32 +40,35 @@ const App = () => {
           .then(() => {
             debug("\ud83d\udfe2 Got Teams context.");
 
-            authentication.getAuthToken({
-              successCallback: (token) => {
-                debug("\u2705 Auth token acquired.");
-                debug("\ud83d\udce6 Token: " + token);
+            authentication.authenticate({
+  url: "https://med-schedule-theta.vercel.app/auth.html",
+  width: 600,
+  height: 535,
+  successCallback: (token) => {
+    debug("✅ Graph token acquired via popup.");
 
-                fetch("https://graph.microsoft.com/v1.0/me", {
-                  headers: {
-                    Authorization: `Bearer ${token}`
-                  }
-                })
-                  .then(res => res.json())
-                  .then(data => {
-                    debug("\u2705 Graph data: " + JSON.stringify(data));
-                    setUser({
-                      displayName: data.displayName || data.userPrincipalName,
-                      email: data.mail || data.userPrincipalName
-                    });
-                  })
-                  .catch(err => {
-                    debug("\u274c Graph error: " + JSON.stringify(err));
-                  });
-              },
-              failureCallback: (err) => {
-                debug("\u274c getAuthToken error: " + JSON.stringify(err));
-              }
-            });
+    fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        debug("✅ User fetched from Graph: " + JSON.stringify(data));
+        setUser({
+          displayName: data.displayName || data.userPrincipalName,
+          email: data.mail || data.userPrincipalName
+        });
+      })
+      .catch(err => {
+        debug("❌ Graph request failed: " + JSON.stringify(err));
+      });
+  },
+  failureCallback: (err) => {
+    debug("❌ Popup auth failed: " + JSON.stringify(err));
+  }
+});
+
           })
           .catch((err) => debug("\u274c getContext failed: " + JSON.stringify(err)));
       })
