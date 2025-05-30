@@ -45,10 +45,27 @@ const App = () => {
                 debug("🔓 Fetching user from Graph...");
 
                 fetch("https://graph.microsoft.com/v1.0/me", {
-                  headers: {
-                    Authorization: `Bearer ${token}`
-                  }
-                })
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
+  .then((res) => res.json())
+  .then((data) => {
+    console.log("🧾 Graph /me result:", data);
+    const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
+    const email = data.mail || data.userPrincipalName || "unknown@example.com";
+
+    setUser({
+      displayName: name,
+      email
+    });
+
+    debug("✅ User fetched from Graph: " + name);
+  })
+  .catch((err) => {
+    debug("❌ Graph /me error: " + JSON.stringify(err));
+  });
+
                   .then((res) => res.json())
                   .then((data) => {
                     setUser({
