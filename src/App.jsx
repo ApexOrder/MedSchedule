@@ -183,7 +183,9 @@ const App = () => {
             }
           }))}
           eventDidMount={(info) => {
-            const { title, notes, createdBy } = info.event.extendedProps;
+            const { notes, createdBy } = info.event.extendedProps;
+const title = info.event.title;
+
             const tooltip = document.createElement("div");
             tooltip.innerHTML = `
               <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
