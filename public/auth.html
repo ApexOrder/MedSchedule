@@ -58,27 +58,28 @@
     }
 
     microsoftTeams.app.initialize().then(() => {
-      updateStatus("Requesting Microsoft login...");
+  updateStatus("Opening MSAL popup...");
 
-      msalInstance.loginPopup(loginRequest)
-        .then((loginResponse) => {
-          updateStatus("Fetching access token...");
+  msalInstance.loginPopup(loginRequest)
+    .then((loginResponse) => {
+      updateStatus("✅ Logged in. Fetching token...");
 
-          return msalInstance.acquireTokenSilent(loginRequest)
-            .catch(() => msalInstance.acquireTokenPopup(loginRequest));
-        })
-        .then((tokenResponse) => {
-          const token = tokenResponse.accessToken;
-          updateStatus("✅ Token acquired. Returning to Teams...");
-          setTimeout(() => {
-            microsoftTeams.authentication.notifySuccess(token);
-          }, 1000);
-        })
-        .catch((error) => {
-          console.error("MSAL error:", error);
-          updateStatus("❌ Login failed: " + error.message);
-          microsoftTeams.authentication.notifyFailure(error.message);
-        });
+      return msalInstance.acquireTokenSilent(loginRequest)
+        .catch(() => msalInstance.acquireTokenPopup(loginRequest));
+    })
+    .then((tokenResponse) => {
+      const token = tokenResponse.accessToken;
+      updateStatus("✅ Token acquired.");
+      console.log("Access Token:", token);
+      microsoftTeams.authentication.notifySuccess(token);
+    })
+    .catch((error) => {
+      console.error(error);
+      updateStatus("❌ Login failed: " + error.message);
+      microsoftTeams.authentication.notifyFailure(error.message);
+    });
+});
+
     });
   </script>
 </body>
