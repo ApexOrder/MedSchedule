@@ -30,6 +30,8 @@ const App = () => {
 
   useEffect(() => {
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
+debug("🌐 iframe origin: " + window.location.origin);
+
 
   debug("🟠 Initializing Microsoft Teams SDK...");
   app.initialize()
@@ -63,9 +65,7 @@ const App = () => {
 
               debug("✅ Auth token acquired.");
               debug("🔓 Fetching user from Graph...");
-              debug("🌐 iframe origin: " + window.location.origin);
-
-
+              
               fetch("https://graph.microsoft.com/v1.0/me", {
                 headers: {
                   Authorization: `Bearer ${token}`
