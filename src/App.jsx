@@ -216,69 +216,110 @@ const App = () => {
 
       <div style={{ margin: '0 auto', maxWidth: '1200px' }}>
         {showModal && (
-          <>
-            {/* Overlay */}
-            <div
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100vw",
-                height: "100vh",
-                backgroundColor: "rgba(0,0,0,0.5)",
-                zIndex: 9998,
-              }}
-              onClick={() => setShowModal(false)} // close modal on background click
-            />
+  <div style={{
+    position: 'fixed',
+    top: '50%', left: '50%',
+    transform: 'translate(-50%, -50%)',
+    background: '#2d2d2d',
+    padding: 20,
+    borderRadius: 8,
+    zIndex: 9999,
+    width: '400px',
+    boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+  }}>
+    <h3 style={{ color: '#fff', marginBottom: 10 }}>
+      {selectedEventIndex !== null ? "Edit Event" : "New Event"}
+    </h3>
 
-            {/* Modal */}
-            <div
-              style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                background: "#2d2d2d",
-                padding: 20,
-                borderRadius: 8,
-                zIndex: 10000,
-                width: "400px",
-                boxShadow: "0 0 10px rgba(0,0,0,0.5)",
-              }}
-            >
-              <h3 style={{ color: "#fff", marginBottom: 10 }}>
-                {selectedEventIndex !== null ? "Edit Event" : "New Event"}
-              </h3>
-              <input
-                type="text"
-                placeholder="Title"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                style={{ width: "100%", marginBottom: 10, padding: 8 }}
-              />
-              <textarea
-                placeholder="Notes"
-                value={newEvent.notes}
-                onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
-                style={{ width: "100%", marginBottom: 10, padding: 8 }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <button
-                  onClick={handleSaveEvent}
-                  style={{ background: "#10b981", padding: 10, color: "#fff", border: "none", borderRadius: 4 }}
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setShowModal(false)}
-                  style={{ background: "#ef4444", padding: 10, color: "#fff", border: "none", borderRadius: 4 }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+    <input
+      type="text"
+      placeholder="Title"
+      value={newEvent.title}
+      onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+      style={{ width: '100%', marginBottom: 10, padding: 8 }}
+    />
+
+    <textarea
+      placeholder="Notes"
+      value={newEvent.notes}
+      onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
+      style={{ width: '100%', marginBottom: 10, padding: 8 }}
+    />
+
+    <label style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 8 }}>
+      <input
+        type="checkbox"
+        checked={newEvent.isRecurring}
+        onChange={(e) => setNewEvent({ ...newEvent, isRecurring: e.target.checked })}
+      />
+      <span style={{ color: '#fff' }}>Recurring event</span>
+    </label>
+
+    {newEvent.isRecurring && (
+      <div style={{ marginBottom: 10 }}>
+        <label style={{ color: '#fff', display: 'block', marginBottom: 4 }}>Interval (days):</label>
+        <input
+          type="number"
+          min="1"
+          value={newEvent.interval}
+          onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
+          style={{ width: '100%', padding: 8 }}
+        />
+
+        <label style={{ color: '#fff', display: 'block', marginTop: 10, marginBottom: 4 }}>End date:</label>
+        <input
+          type="date"
+          value={newEvent.endDate}
+          onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+          style={{ width: '100%', padding: 8 }}
+        />
+      </div>
+    )}
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+      <button
+        onClick={handleSaveEvent}
+        style={{ background: '#10b981', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
+      >
+        Save
+      </button>
+
+      <button
+        onClick={() => setShowModal(false)}
+        style={{ background: '#ef4444', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
+      >
+        Cancel
+      </button>
+    </div>
+
+    {selectedEventIndex !== null && (
+      <div style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <button
+          onClick={() => {
+            if (window.confirm("Are you sure you want to delete this event?")) {
+              handleDeleteEvent();
+            }
+          }}
+          style={{ background: '#ef4444', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
+        >
+          Delete Event
+        </button>
+
+        <button
+          onClick={() => {
+            if (window.confirm("Are you sure you want to delete the entire series?")) {
+              handleDeleteSeries();
+            }
+          }}
+          style={{ background: '#b91c1c', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
+        >
+          Delete Series
+        </button>
+      </div>
+    )}
+  </div>
+)}
+
 
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
