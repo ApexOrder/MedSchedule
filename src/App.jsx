@@ -173,7 +173,20 @@ const App = () => {
           initialView="dayGridMonth"
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          events={events.map(evt => ({ title: evt.title, start: evt.date, color: evt.color }))}
+          events={events.map(evt => ({
+            title: evt.title,
+            start: evt.date,
+            color: evt.color,
+            extendedProps: {
+              notes: evt.notes,
+              createdBy: evt.createdBy
+            }
+          }))}
+          eventDidMount={(info) => {
+            const { title, notes, createdBy } = info.event.extendedProps;
+            const tooltip = `📝 ${title}\n💬 ${notes || "No notes"}\n👤 ${createdBy || "Unknown"}`;
+            info.el.setAttribute("title", tooltip);
+          }}
         />
       </div>
 
