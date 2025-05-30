@@ -184,8 +184,33 @@ const App = () => {
           }))}
           eventDidMount={(info) => {
             const { title, notes, createdBy } = info.event.extendedProps;
-            const tooltip = `📝 ${title}\n💬 ${notes || "No notes"}\n👤 ${createdBy || "Unknown"}`;
-            info.el.setAttribute("title", tooltip);
+            const tooltip = document.createElement("div");
+            tooltip.innerHTML = `
+              <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
+                📝 <strong>${title}</strong><br/>
+                💬 ${notes || "No notes"}<br/>
+                👤 ${createdBy || "Unknown"}
+              </div>
+            `;
+            tooltip.style.position = "absolute";
+            tooltip.style.display = "none";
+            tooltip.style.zIndex = 1000;
+            document.body.appendChild(tooltip);
+
+            info.el.addEventListener("mouseenter", (e) => {
+              tooltip.style.display = "block";
+              tooltip.style.left = e.pageX + 10 + "px";
+              tooltip.style.top = e.pageY + 10 + "px";
+            });
+
+            info.el.addEventListener("mousemove", (e) => {
+              tooltip.style.left = e.pageX + 10 + "px";
+              tooltip.style.top = e.pageY + 10 + "px";
+            });
+
+            info.el.addEventListener("mouseleave", () => {
+              tooltip.style.display = "none";
+            });
           }}
         />
       </div>
