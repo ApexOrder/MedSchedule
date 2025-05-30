@@ -32,10 +32,9 @@ const App = () => {
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
   useEffect(() => {
-    debug("🌐 iframe origin: " + window.location.origin);
-    ...
+   debug("🌐 iframe origin: " + window.location.origin);
+debug("🔰 Initializing Microsoft Teams SDK...");
 
-    debug("\ud83d\udd20 Initializing Microsoft Teams SDK...");
 
     app.initialize()
       .then(() => {
