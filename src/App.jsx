@@ -63,6 +63,8 @@ const App = () => {
 
               debug("✅ Auth token acquired.");
               debug("🔓 Fetching user from Graph...");
+              debug("🌐 iframe origin: " + window.location.origin);
+
 
               fetch("https://graph.microsoft.com/v1.0/me", {
                 headers: {
