@@ -9,6 +9,7 @@ import "./App.css";
 
 const App = () => {
   const [user, setUser] = useState(null);
+  const [authDebug, setAuthDebug] = useState([]);
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventIndex, setSelectedEventIndex] = useState(null);
@@ -28,12 +29,32 @@ const App = () => {
   });
 
   useEffect(() => {
+    const debug = [];
     app.initialize().then(() => {
+      debug.push("✅ app.initialize");
       app.getContext().then(() => {
+        debug.push("✅ app.getContext");
         authentication.getAuthToken().then(() => {
-          authentication.getUser().then((u) => setUser(u));
+          debug.push("✅ getAuthToken");
+          authentication.getUser().then((u) => {
+            debug.push("✅ getUser: " + JSON.stringify(u));
+            setUser(u);
+            setAuthDebug(debug);
+          }).catch(err => {
+            debug.push("❌ getUser error: " + err.message);
+            setAuthDebug(debug);
+          });
+        }).catch(err => {
+          debug.push("❌ getAuthToken error: " + err.message);
+          setAuthDebug(debug);
         });
+      }).catch(err => {
+        debug.push("❌ getContext error: " + err.message);
+        setAuthDebug(debug);
       });
+    }).catch(err => {
+      debug.push("❌ initialize error: " + err.message);
+      setAuthDebug(debug);
     });
   }, []);
 
@@ -158,13 +179,20 @@ const App = () => {
     <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHeight: '100vh' }}>
       <h2 style={{ color: '#f97316', fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>Care Calendar</h2>
 
-      <div style={{ background: '#2d2d2d', padding: 12, borderRadius: 6, marginBottom: 20 }}>
+      <div style={{ background: '#2d2d2d', padding: 12, borderRadius: 6, marginBottom: 10 }}>
         {user ? (
           <>👤 <strong>{user.displayName}</strong> ({user.email})</>
         ) : (
           <>🔄 Authenticating…</>
         )}
       </div>
+
+      {authDebug.length > 0 && (
+        <div style={{ background: '#3a3a3a', padding: 10, borderRadius: 6, fontSize: 12, fontFamily: 'monospace', marginBottom: 20 }}>
+          <strong>🔧 Auth Debug Log:</strong>
+          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 5 }}>{authDebug.join("\n")}</pre>
+        </div>
+      )}
 
       <div style={{ margin: '0 auto', maxWidth: '1200px' }}>
         <FullCalendar
