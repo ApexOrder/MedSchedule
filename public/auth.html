@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Care Calendar Auth</title>
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+    <script src="https://statics.teams.cdn.office.net/sdk/v2.0.0/js/MicrosoftTeams.min.js"></script>
+    <script>
+      const clientId = "72934a41-9161-4502-9a56-3f9809fb305d"; // Your Azure App ID
+      const redirectUri = "https://med-schedule-theta.vercel.app/auth.html";
+
+      const msalConfig = {
+        auth: {
+          clientId,
+          redirectUri
+        }
+      };
+
+      const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+      const loginRequest = {
+        scopes: ["User.Read", "email", "profile", "openid"]
+      };
+
+      microsoftTeams.app.initialize().then(() => {
+        msalInstance.loginPopup(loginRequest)
+          .then((loginResponse) => {
+            return msalInstance.acquireTokenSilent(loginRequest);
+          })
+          .then((tokenResponse) => {
+            const token = tokenResponse.accessToken;
+            microsoftTeams.authentication.notifySuccess(token);
+          })
+          .catch((error) => {
+            microsoftTeams.authentication.notifyFailure("MSAL error: " + error.message);
+          });
+      });
+    </script>
+  </head>
+  <body style="font-family:sans-serif">
+    <h3>Signing in to Microsoft...</h3>
+    <p>Please wait while we authenticate you with Microsoft Graph.</p>
+  </body>
+</html>
