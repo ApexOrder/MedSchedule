@@ -51,25 +51,23 @@ const App = () => {
               debug("\u274c Failed to decode token: " + e.message);
             }
 
-            fetch("https://graph.microsoft.com/v1.0/me", {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            })
-              .then((res) => res.json())
-              .then((data) => {
-                setUser({
-                  displayName: data.displayName,
-                  email: data.mail || data.userPrincipalName
-                });
-                debug("\u2705 Graph user fetched: " + (data.displayName || data.userPrincipalName));
-              })
-              .catch((err) => debug("\u274c Graph error: " + JSON.stringify(err)));
-          },
-          failureCallback: (err) => {
-            debug("\u274c getAuthToken error: " + JSON.stringify(err));
-          }
-        });
+            fetch("/api/getUser", {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
+  .then((res) => res.json())
+  .then((data) => {
+    setUser({
+      displayName: data.displayName,
+      email: data.email
+    });
+    debug("✅ Custom API user fetched: " + data.displayName);
+  })
+  .catch((err) => {
+    debug("❌ Custom API error: " + JSON.stringify(err));
+  });
+
       })
       .catch((err) => debug("\u274c Initialization failed: " + JSON.stringify(err)));
   }, []);
