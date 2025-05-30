@@ -40,48 +40,37 @@ const App = () => {
             debug("🟢 Got Teams context.");
 
             authentication.getAuthToken({
-              successCallback: (token) => {
-                debug("✅ Auth token acquired.");
-                debug("🔓 Fetching user from Graph...");
+  successCallback: (token) => {
+    debug("✅ Auth token acquired.");
+    debug("🔓 Fetching user from Graph...");
 
-                fetch("https://graph.microsoft.com/v1.0/me", {
-  headers: {
-    Authorization: `Bearer ${token}`
+    fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("🧾 Graph /me result:", data);
+        const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
+        const email = data.mail || data.userPrincipalName || "unknown@example.com";
+
+        setUser({
+          displayName: name,
+          email
+        });
+
+        debug("✅ User fetched from Graph: " + name);
+      })
+      .catch((err) => {
+        debug("❌ Graph /me error: " + JSON.stringify(err));
+      });
+  },
+  failureCallback: (err) => {
+    debug("❌ getAuthToken error: " + JSON.stringify(err));
   }
-})
-  .then((res) => res.json())
-  .then((data) => {
-    console.log("🧾 Graph /me result:", data);
-    const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
-    const email = data.mail || data.userPrincipalName || "unknown@example.com";
+});
 
-    setUser({
-      displayName: name,
-      email
-    });
-
-    debug("✅ User fetched from Graph: " + name);
-  })
-  .catch((err) => {
-    debug("❌ Graph /me error: " + JSON.stringify(err));
-  });
-
-                  .then((res) => res.json())
-                  .then((data) => {
-                    setUser({
-                      displayName: data.displayName,
-                      email: data.mail || data.userPrincipalName
-                    });
-                    debug("✅ User fetched from Graph: " + data.displayName);
-                  })
-                  .catch((err) => {
-                    debug("❌ Graph /me error: " + JSON.stringify(err));
-                  });
-              },
-              failureCallback: (err) => {
-                debug("❌ getAuthToken error: " + JSON.stringify(err));
-              }
-            });
           })
           .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
       })
