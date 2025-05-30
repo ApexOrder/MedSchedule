@@ -41,13 +41,11 @@ debug("🌐 iframe origin: " + window.location.origin);
         .then(() => {
           debug("🟢 Got Teams context.");
 
-          authentication.authenticate({
-  url: "https://med-schedule-theta.vercel.app/auth.html",
-  width: 600,
-  height: 535,
+          authentication.getAuthToken({
   successCallback: (token) => {
-    debug("✅ Graph token acquired via popup.");
-    
+    debug("✅ Auth token acquired.");
+    debug("📦 Token: " + token);
+
     fetch("https://graph.microsoft.com/v1.0/me", {
       headers: {
         Authorization: `Bearer ${token}`
@@ -55,20 +53,21 @@ debug("🌐 iframe origin: " + window.location.origin);
     })
       .then(res => res.json())
       .then(data => {
-        const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
-        const email = data.mail || data.userPrincipalName || "unknown@example.com";
-
-        setUser({ displayName: name, email });
-        debug("✅ User loaded from Graph: " + name);
+        debug("✅ Graph data: " + JSON.stringify(data));
+        setUser({
+          displayName: data.displayName || data.userPrincipalName,
+          email: data.mail || data.userPrincipalName
+        });
       })
       .catch(err => {
-        debug("❌ Graph request failed: " + JSON.stringify(err));
+        debug("❌ Graph error: " + JSON.stringify(err));
       });
   },
   failureCallback: (err) => {
-    debug("❌ authenticate() failed: " + JSON.stringify(err));
+    debug("❌ getAuthToken error: " + JSON.stringify(err));
   }
 });
+
 
 
 
