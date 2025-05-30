@@ -2,84 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Signing in...</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <title>Care Calendar - Auth</title>
+  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
   <script src="https://statics.teams.cdn.office.net/sdk/v2.0.0/js/MicrosoftTeams.min.js"></script>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #1e1e1e;
-      color: #f1f1f1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    h1 {
-      color: #f97316;
-    }
-    .status {
-      margin-top: 1rem;
-      color: #bbb;
-    }
-  </style>
 </head>
-<body>
-  <h1>Care Calendar</h1>
-  <p class="status" id="status">Signing you in with Microsoft...</p>
+<body style="background:#1e1e1e;color:white;font-family:sans-serif;padding:2rem;">
+  <h2>Care Calendar</h2>
+  <p>Signing you in with Microsoft...</p>
 
   <script>
-    const clientId = "72934a41-9161-4502-9a56-3f9809fb305d"; // Your Azure App Registration Client ID
-    const redirectUri = "https://med-schedule-theta.vercel.app/auth.html";
-
     const msalConfig = {
       auth: {
-        clientId,
-        redirectUri
+        clientId: "72934a41-9161-4502-9a56-3f9809fb305d", // your App ID
+        authority: "https://login.microsoftonline.com/a3fa1e2a-6173-409a-8f0d-35492b1e54cc", // your Tenant ID
+        redirectUri: "https://med-schedule-theta.vercel.app/auth.html"
       },
       cache: {
         cacheLocation: "sessionStorage"
       }
     };
 
-    const msalInstance = new msal.PublicClientApplication(msalConfig);
-
     const loginRequest = {
-      scopes: ["User.Read", "email", "profile", "openid"]
+      scopes: ["User.Read"]
     };
 
-    const statusEl = document.getElementById("status");
-
-    function updateStatus(message) {
-      if (statusEl) statusEl.textContent = message;
-    }
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
 
     microsoftTeams.app.initialize().then(() => {
-  updateStatus("Opening MSAL popup...");
-
-  msalInstance.loginPopup(loginRequest)
-    .then((loginResponse) => {
-      updateStatus("✅ Logged in. Fetching token...");
-
-      return msalInstance.acquireTokenSilent(loginRequest)
-        .catch(() => msalInstance.acquireTokenPopup(loginRequest));
-    })
-    .then((tokenResponse) => {
-      const token = tokenResponse.accessToken;
-      updateStatus("✅ Token acquired.");
-      console.log("Access Token:", token);
-      microsoftTeams.authentication.notifySuccess(token);
-    })
-    .catch((error) => {
-      console.error(error);
-      updateStatus("❌ Login failed: " + error.message);
-      microsoftTeams.authentication.notifyFailure(error.message);
-    });
-});
-
+      msalInstance.loginPopup(loginRequest)
+        .then(loginResp => {
+          return msalInstance.acquireTokenSilent(loginRequest)
+            .catch(() => msalInstance.acquireTokenPopup(loginRequest));
+        })
+        .then(tokenResp => {
+          const token = tokenResp.accessToken;
+          microsoftTeams.authentication.notifySuccess(token);
+        })
+        .catch(err => {
+          microsoftTeams.authentication.notifyFailure(err.toString());
+        });
     });
   </script>
 </body>
