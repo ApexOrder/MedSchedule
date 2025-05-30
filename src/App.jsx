@@ -182,19 +182,34 @@ const App = () => {
   };
 
   const handleDeleteEvent = () => {
-    if (!window.confirm("Are you sure you want to delete this event?")) return;
-    const updatedEvents = events.filter((_, index) => index !== selectedEventIndex);
-    setEvents(updatedEvents);
-    setShowModal(false);
-  };
+  if (selectedEventIndex === null) {
+    debug("❌ No event selected for deletion.");
+    return;
+  }
+  if (!window.confirm("Are you sure you want to delete this event?")) return;
 
-  const handleDeleteSeries = () => {
-    if (!window.confirm("Are you sure you want to delete the entire series?")) return;
-    const eventToDelete = events[selectedEventIndex];
-    const updatedEvents = events.filter(e => e.originDate !== eventToDelete.originDate);
-    setEvents(updatedEvents);
-    setShowModal(false);
-  };
+  debug(`🗑️ Deleting event at index ${selectedEventIndex}`);
+  const updatedEvents = events.filter((_, index) => index !== selectedEventIndex);
+  setEvents(updatedEvents);
+  setShowModal(false);
+  setSelectedEventIndex(null);
+};
+
+const handleDeleteSeries = () => {
+  if (selectedEventIndex === null) {
+    debug("❌ No event selected for series deletion.");
+    return;
+  }
+  if (!window.confirm("Are you sure you want to delete the entire series?")) return;
+
+  const eventToDelete = events[selectedEventIndex];
+  debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
+  const updatedEvents = events.filter(e => e.originDate !== eventToDelete.originDate);
+  setEvents(updatedEvents);
+  setShowModal(false);
+  setSelectedEventIndex(null);
+};
+
 
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
@@ -391,9 +406,9 @@ const App = () => {
               >
                 <button
                   onClick={() => {
-                    if (window.confirm("Are you sure you want to delete this event?")) {
-                      handleDeleteEvent();
-                    }
+    if (window.confirm("Are you sure you want to delete this event?")) {
+      handleDeleteEvent();
+    }
                   }}
                   style={{
                     background: "#ef4444",
@@ -409,9 +424,9 @@ const App = () => {
 
                 <button
                   onClick={() => {
-                    if (window.confirm("Are you sure you want to delete the entire series?")) {
-                      handleDeleteSeries();
-                    }
+    if (window.confirm("Are you sure you want to delete the entire series?")) {
+      handleDeleteSeries();
+    }
                   }}
                   style={{
                     background: "#b91c1c",
