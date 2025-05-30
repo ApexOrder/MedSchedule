@@ -13,7 +13,7 @@ const App = () => {
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventIndex, setSelectedEventIndex] = useState(null);
-  const [editSeries, setEditSeries] = useState(false);
+  const [editMode, setEditMode] = useState("single"); // "single" or "series"
 
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -94,7 +94,7 @@ const App = () => {
     });
     setSelectedEventIndex(null);
     setShowModal(true);
-    setEditSeries(false);
+    setEditMode("single");
   };
 
   const handleEventClick = (clickInfo) => {
@@ -105,7 +105,7 @@ const App = () => {
       setNewEvent(events[index]);
       setSelectedEventIndex(index);
       setShowModal(true);
-      setEditSeries(false);
+      setEditMode("single"); // default to single on open
     }
   };
 
@@ -116,30 +116,30 @@ const App = () => {
     let updatedEvents = [...events];
 
     if (selectedEventIndex !== null) {
-      const editedEvent = events[selectedEventIndex];
-
-      if (editSeries && editedEvent.originDate) {
-        updatedEvents = updatedEvents.filter((e) => {
-          if (e.originDate !== editedEvent.originDate) return true;
-          return new Date(e.date) < new Date(editedEvent.date);
+      if (editMode === "series" && newEvent.originDate) {
+        // Update all events in series - no deletion, just update properties
+        updatedEvents = updatedEvents.map(e => {
+          if (e.originDate === newEvent.originDate) {
+            return {
+              ...e,
+              title,
+              notes: newEvent.notes,
+              color: newEvent.color,
+              isRecurring,
+              interval,
+              endDate,
+              createdBy: newEvent.createdBy,
+              createdAt: newEvent.createdAt,
+            };
+          }
+          return e;
         });
-
-        let start = new Date(date);
-        const end = new Date(endDate);
-        while (start <= end) {
-          updatedEvents.push({
-            ...newEvent,
-            date: start.toISOString().split("T")[0],
-            originDate: newEvent.originDate || date,
-            createdBy: newEvent.createdBy,
-            createdAt: newEvent.createdAt
-          });
-          start.setDate(start.getDate() + parseInt(interval));
-        }
       } else {
+        // Update single event only
         updatedEvents[selectedEventIndex] = { ...newEvent };
       }
     } else {
+      // New event creation
       if (isRecurring && endDate) {
         let start = new Date(date);
         const end = new Date(endDate);
@@ -150,7 +150,7 @@ const App = () => {
             date: start.toISOString().split("T")[0],
             originDate: date,
             createdBy: user?.displayName || "Unknown",
-            createdAt
+            createdAt,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -158,7 +158,7 @@ const App = () => {
         updatedEvents.push({
           ...newEvent,
           createdBy: user?.displayName || "Unknown",
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         });
       }
     }
@@ -178,6 +178,7 @@ const App = () => {
       originDate: ""
     });
     setSelectedEventIndex(null);
+    setEditMode("single");
   };
 
   const handleDeleteEvent = () => {
@@ -196,134 +197,245 @@ const App = () => {
   };
 
   return (
-    <div style={{ padding: 20, background: '#1e1e1e', color: '#fff', minHeight: '100vh' }}>
-      <h2 style={{ color: '#f97316', fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>Care Calendar</h2>
+    <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
+      <h2
+        style={{
+          color: "#f97316",
+          fontSize: 24,
+          fontWeight: "bold",
+          textAlign: "center",
+          marginBottom: 20,
+        }}
+      >
+        Care Calendar
+      </h2>
 
-      <div style={{ background: '#2d2d2d', padding: 12, borderRadius: 6, marginBottom: 10 }}>
+      <div style={{ background: "#2d2d2d", padding: 12, borderRadius: 6, marginBottom: 10 }}>
         {user ? (
-          <>👤 <strong>{user.displayName}</strong> ({user.email})</>
+          <>
+            👤 <strong>{user.displayName}</strong> ({user.email})
+          </>
         ) : (
           <>🔄 Authenticating…</>
         )}
       </div>
 
       {authDebug.length > 0 && (
-        <div style={{ background: '#3a3a3a', padding: 10, borderRadius: 6, fontSize: 12, fontFamily: 'monospace', marginBottom: 20 }}>
+        <div
+          style={{
+            background: "#3a3a3a",
+            padding: 10,
+            borderRadius: 6,
+            fontSize: 12,
+            fontFamily: "monospace",
+            marginBottom: 20,
+          }}
+        >
           <strong>🔧 Auth Debug Log:</strong>
-          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 5 }}>{authDebug.join("\n")}</pre>
+          <pre style={{ whiteSpace: "pre-wrap", marginTop: 5 }}>{authDebug.join("\n")}</pre>
         </div>
       )}
 
-      <div style={{ margin: '0 auto', maxWidth: '1200px' }}>
+      <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         {showModal && (
-  <div style={{
-    position: 'fixed',
-    top: '50%', left: '50%',
-    transform: 'translate(-50%, -50%)',
-    background: '#2d2d2d',
-    padding: 20,
-    borderRadius: 8,
-    zIndex: 9999,
-    width: '400px',
-    boxShadow: '0 0 10px rgba(0,0,0,0.5)'
-  }}>
-    <h3 style={{ color: '#fff', marginBottom: 10 }}>
-      {selectedEventIndex !== null ? "Edit Event" : "New Event"}
-    </h3>
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              background: "#2d2d2d",
+              padding: 20,
+              borderRadius: 8,
+              zIndex: 9999,
+              width: 400,
+              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+            }}
+          >
+            <h3 style={{ color: "#fff", marginBottom: 4 }}>
+              {selectedEventIndex !== null ? "Edit Event" : "New Event"}
+            </h3>
 
-    <input
-      type="text"
-      placeholder="Title"
-      value={newEvent.title}
-      onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-      style={{ width: '100%', marginBottom: 10, padding: 8 }}
-    />
+            {/* Created date label */}
+            {selectedEventIndex !== null && newEvent.createdAt && (
+              <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
+                Created: {new Date(newEvent.createdAt).toLocaleString()}
+              </div>
+            )}
 
-    <textarea
-      placeholder="Notes"
-      value={newEvent.notes}
-      onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
-      style={{ width: '100%', marginBottom: 10, padding: 8 }}
-    />
+            {/* Edit mode choice only when editing series event */}
+            {selectedEventIndex !== null &&
+              newEvent.originDate &&
+              events.some((e) => e.originDate === newEvent.originDate && e !== newEvent) && (
+                <div style={{ marginBottom: 10, color: "#fff" }}>
+                  <label style={{ marginRight: 12 }}>
+                    <input
+                      type="radio"
+                      name="editMode"
+                      value="single"
+                      checked={editMode === "single"}
+                      onChange={() => setEditMode("single")}
+                    />{" "}
+                    Edit this event only
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="editMode"
+                      value="series"
+                      checked={editMode === "series"}
+                      onChange={() => setEditMode("series")}
+                    />{" "}
+                    Edit entire series
+                  </label>
+                </div>
+              )}
 
-    <label style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 8 }}>
-      <input
-        type="checkbox"
-        checked={newEvent.isRecurring}
-        onChange={(e) => setNewEvent({ ...newEvent, isRecurring: e.target.checked })}
-      />
-      <span style={{ color: '#fff' }}>Recurring event</span>
-    </label>
+            <input
+              type="text"
+              placeholder="Title"
+              value={newEvent.title}
+              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+              style={{ width: "100%", marginBottom: 10, padding: 8 }}
+            />
 
-    {newEvent.isRecurring && (
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ color: '#fff', display: 'block', marginBottom: 4 }}>Interval (days):</label>
-        <input
-          type="number"
-          min="1"
-          value={newEvent.interval}
-          onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
-          style={{ width: '100%', padding: 8 }}
-        />
+            <textarea
+              placeholder="Notes"
+              value={newEvent.notes}
+              onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
+              style={{ width: "100%", marginBottom: 10, padding: 8 }}
+            />
 
-        <label style={{ color: '#fff', display: 'block', marginTop: 10, marginBottom: 4 }}>End date:</label>
-        <input
-          type="date"
-          value={newEvent.endDate}
-          onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
-          style={{ width: '100%', padding: 8 }}
-        />
-      </div>
-    )}
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: 10,
+                gap: 8,
+                color: "#fff",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={newEvent.isRecurring}
+                onChange={(e) => setNewEvent({ ...newEvent, isRecurring: e.target.checked })}
+              />
+              <span>Recurring event</span>
+            </label>
 
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-      <button
-        onClick={handleSaveEvent}
-        style={{ background: '#10b981', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
-      >
-        Save
-      </button>
+            {newEvent.isRecurring && (
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
+                  Interval (days):
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newEvent.interval}
+                  onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
+                  style={{ width: "100%", padding: 8 }}
+                />
 
-      <button
-        onClick={() => setShowModal(false)}
-        style={{ background: '#ef4444', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
-      >
-        Cancel
-      </button>
-    </div>
+                <label
+                  style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}
+                >
+                  End date:
+                </label>
+                <input
+                  type="date"
+                  value={newEvent.endDate}
+                  onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                  style={{ width: "100%", padding: 8 }}
+                />
+              </div>
+            )}
 
-    {selectedEventIndex !== null && (
-      <div style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <button
-          onClick={() => {
-            if (window.confirm("Are you sure you want to delete this event?")) {
-              handleDeleteEvent();
-            }
-          }}
-          style={{ background: '#ef4444', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
-        >
-          Delete Event
-        </button>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <button
+                onClick={handleSaveEvent}
+                style={{
+                  background: "#10b981",
+                  padding: 10,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  flex: 1,
+                }}
+              >
+                Save
+              </button>
 
-        <button
-          onClick={() => {
-            if (window.confirm("Are you sure you want to delete the entire series?")) {
-              handleDeleteSeries();
-            }
-          }}
-          style={{ background: '#b91c1c', padding: 10, color: '#fff', border: 'none', borderRadius: 4, flex: 1 }}
-        >
-          Delete Series
-        </button>
-      </div>
-    )}
-  </div>
-)}
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: "#ef4444",
+                  padding: 10,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  flex: 1,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
 
+            {selectedEventIndex !== null && (
+              <div
+                style={{
+                  marginTop: 20,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete this event?")) {
+                      handleDeleteEvent();
+                    }
+                  }}
+                  style={{
+                    background: "#ef4444",
+                    padding: 10,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    flex: 1,
+                  }}
+                >
+                  Delete Event
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete the entire series?")) {
+                      handleDeleteSeries();
+                    }
+                  }}
+                  style={{
+                    background: "#b91c1c",
+                    padding: 10,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    flex: 1,
+                  }}
+                >
+                  Delete Series
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          headerToolbar={{ start: "dayGridMonth,timeGridWeek,timeGridDay", center: "title", end: "prev,next today" }}
+          headerToolbar={{
+            start: "dayGridMonth,timeGridWeek,timeGridDay",
+            center: "title",
+            end: "prev,next today",
+          }}
           initialView="dayGridMonth"
           dateClick={handleDateClick}
           eventClick={handleEventClick}
@@ -337,44 +449,42 @@ const App = () => {
             },
           }))}
           eventDidMount={(info) => {
-  const { notes, createdBy } = info.event.extendedProps;
-  const title = info.event.title;
+            const { notes, createdBy } = info.event.extendedProps;
+            const title = info.event.title;
 
-  const tooltip = document.createElement("div");
-  tooltip.innerHTML = `
-    <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
-      📝 <strong>${title}</strong><br/>
-      💬 ${notes || "No notes"}<br/>
-      👤 ${createdBy || "Unknown"}
-    </div>
-  `;
-  tooltip.style.position = "absolute";
-  tooltip.style.display = "none";
-  tooltip.style.zIndex = 1000;
-  document.body.appendChild(tooltip);
+            const tooltip = document.createElement("div");
+            tooltip.innerHTML = `
+              <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
+                📝 <strong>${title}</strong><br/>
+                💬 ${notes || "No notes"}<br/>
+                👤 ${createdBy || "Unknown"}
+              </div>
+            `;
+            tooltip.style.position = "absolute";
+            tooltip.style.display = "none";
+            tooltip.style.zIndex = 1000;
+            document.body.appendChild(tooltip);
 
-  info.el.addEventListener("mouseenter", (e) => {
-    tooltip.style.display = "block";
-    tooltip.style.left = e.pageX + 10 + "px";
-    tooltip.style.top = e.pageY + 10 + "px";
-  });
+            info.el.addEventListener("mouseenter", (e) => {
+              tooltip.style.display = "block";
+              tooltip.style.left = e.pageX + 10 + "px";
+              tooltip.style.top = e.pageY + 10 + "px";
+            });
 
-  info.el.addEventListener("mousemove", (e) => {
-    tooltip.style.left = e.pageX + 10 + "px";
-    tooltip.style.top = e.pageY + 10 + "px";
-  });
+            info.el.addEventListener("mousemove", (e) => {
+              tooltip.style.left = e.pageX + 10 + "px";
+              tooltip.style.top = e.pageY + 10 + "px";
+            });
 
-  info.el.addEventListener("mouseleave", () => {
-    tooltip.style.display = "none";
-  });
+            info.el.addEventListener("mouseleave", () => {
+              tooltip.style.display = "none";
+            });
 
-  // Optional: Hide tooltip on click just to be safe
-  info.el.addEventListener("click", () => {
-    tooltip.style.display = "none";
-  });
-}}
-
-
+            // Optional: Hide tooltip on click just to be safe
+            info.el.addEventListener("click", () => {
+              tooltip.style.display = "none";
+            });
+          }}
         />
       </div>
     </div>
