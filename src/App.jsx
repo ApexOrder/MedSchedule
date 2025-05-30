@@ -29,42 +29,39 @@ const App = () => {
   });
 
   useEffect(() => {
-    const debug = (msg) => {
-      setAuthDebug((prev) => [...prev, msg]);
-    };
+    const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
     debug("🟠 Initializing Microsoft Teams SDK...");
+    app.initialize()
+      .then(() => {
+        debug("🟢 Teams SDK initialized.");
+        app.getContext()
+          .then(() => {
+            debug("🟢 Got Teams context.");
 
-    app.initialize().then(() => {
-      debug("🟢 Teams SDK initialized.");
-      app.getContext().then(() => {
-        debug("🟢 Got Teams context.");
+            authentication.getAuthToken({
+              successCallback: (token) => {
+                debug("✅ Auth token acquired.");
+                debug("🔓 Attempting to get user...");
 
-        authentication.getAuthToken({
-          successCallback: (token) => {
-            debug("✅ Auth token acquired.");
-            debug("🔓 Attempting to get user...");
-
-            authentication.getUser({
-              successCallback: (user) => {
-                debug("✅ User retrieved: " + user.displayName);
-                setUser(user);
+                authentication.getUser({
+                  successCallback: (user) => {
+                    debug("✅ User retrieved: " + user.displayName);
+                    setUser(user);
+                  },
+                  failureCallback: (err) => {
+                    debug("❌ getUser error: " + JSON.stringify(err));
+                  }
+                });
               },
               failureCallback: (err) => {
-                debug("❌ getUser error: " + JSON.stringify(err));
+                debug("❌ getAuthToken error: " + JSON.stringify(err));
               }
             });
-          },
-          failureCallback: (err) => {
-            debug("❌ getAuthToken error: " + JSON.stringify(err));
-          }
-        });
-      }).catch((err) => {
-        debug("❌ getContext failed: " + JSON.stringify(err));
-      });
-    }).catch((err) => {
-      debug("❌ app.initialize failed: " + JSON.stringify(err));
-    });
+          })
+          .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
+      })
+      .catch((err) => debug("❌ app.initialize failed: " + JSON.stringify(err)));
   }, []);
 
   const handleDateClick = (info) => {
