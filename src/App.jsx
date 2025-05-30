@@ -32,6 +32,13 @@ const App = () => {
     const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
+    try {
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  debug("🧾 Token audience: " + payload.aud);
+} catch (e) {
+  debug("❌ Failed to decode token: " + e.message);
+}
+
 
     app.initialize()
       .then(() => {
