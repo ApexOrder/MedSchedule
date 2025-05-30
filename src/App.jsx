@@ -40,34 +40,29 @@ const App = () => {
           .then(() => {
             debug("\ud83d\udfe2 Got Teams context.");
 
-            authentication.authenticate({
-  url: "https://med-schedule-theta.vercel.app/auth.html",
-  width: 600,
-  height: 535,
+            authentication.getAuthToken({
   successCallback: (token) => {
-    debug("✅ Graph token acquired via popup.");
-
     fetch("https://graph.microsoft.com/v1.0/me", {
       headers: {
         Authorization: `Bearer ${token}`
       }
     })
-      .then(res => res.json())
-      .then(data => {
-        debug("✅ User fetched from Graph: " + JSON.stringify(data));
+      .then((res) => res.json())
+      .then((data) => {
         setUser({
-          displayName: data.displayName || data.userPrincipalName,
+          displayName: data.displayName,
           email: data.mail || data.userPrincipalName
         });
       })
-      .catch(err => {
-        debug("❌ Graph request failed: " + JSON.stringify(err));
+      .catch((err) => {
+        console.error("❌ Graph error:", err);
       });
   },
   failureCallback: (err) => {
-    debug("❌ Popup auth failed: " + JSON.stringify(err));
+    console.error("❌ getAuthToken error:", err);
   }
 });
+
 
           })
           .catch((err) => debug("\u274c getContext failed: " + JSON.stringify(err)));
