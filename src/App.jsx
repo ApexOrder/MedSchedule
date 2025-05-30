@@ -88,8 +88,23 @@ debug("🌐 iframe origin: " + window.location.origin);
                 });
             },
             failureCallback: (err) => {
-              debug("❌ getAuthToken error: " + JSON.stringify(err));
-            }
+  debug("❌ getAuthToken error: " + JSON.stringify(err));
+
+  // Try to force token fetch again and log audience
+  authentication.getAuthToken({
+    successCallback: (token) => {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      debug("🧪 RETRY TOKEN PAYLOAD:");
+      debug("- aud: " + payload.aud);
+      debug("- scp: " + payload.scp);
+      debug("- iss: " + payload.iss);
+    },
+    failureCallback: (e) => {
+      debug("❌ RETRY also failed: " + JSON.stringify(e));
+    }
+  });
+}
+
           });
         })
         .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
