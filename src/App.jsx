@@ -60,7 +60,8 @@ const App = () => {
           email
         });
 
-        debug("✅ User fetched from Graph: " + name);
+        debug("✅ User fetched from Graph object:\n" + JSON.stringify(data, null, 2));
+
       })
       .catch((err) => {
         debug("❌ Graph /me error: " + JSON.stringify(err));
