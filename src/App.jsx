@@ -42,17 +42,24 @@ const App = () => {
             authentication.getAuthToken({
               successCallback: (token) => {
                 debug("✅ Auth token acquired.");
-                debug("🔓 Attempting to get user...");
+                debug("🔓 Fetching user from Graph...");
 
-                authentication.getUser({
-                  successCallback: (user) => {
-                    debug("✅ User retrieved: " + user.displayName);
-                    setUser(user);
-                  },
-                  failureCallback: (err) => {
-                    debug("❌ getUser error: " + JSON.stringify(err));
+                fetch("https://graph.microsoft.com/v1.0/me", {
+                  headers: {
+                    Authorization: `Bearer ${token}`
                   }
-                });
+                })
+                  .then((res) => res.json())
+                  .then((data) => {
+                    setUser({
+                      displayName: data.displayName,
+                      email: data.mail || data.userPrincipalName
+                    });
+                    debug("✅ User fetched from Graph: " + data.displayName);
+                  })
+                  .catch((err) => {
+                    debug("❌ Graph /me error: " + JSON.stringify(err));
+                  });
               },
               failureCallback: (err) => {
                 debug("❌ getAuthToken error: " + JSON.stringify(err));
@@ -63,6 +70,8 @@ const App = () => {
       })
       .catch((err) => debug("❌ app.initialize failed: " + JSON.stringify(err)));
   }, []);
+
+  // All your other logic below remains the same (handleDateClick, handleSaveEvent, etc.)
 
   const handleDateClick = (info) => {
     const createdAt = new Date().toISOString();
