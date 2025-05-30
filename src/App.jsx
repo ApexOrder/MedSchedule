@@ -29,50 +29,48 @@ const App = () => {
   });
 
   useEffect(() => {
-  const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
-debug("🌐 iframe origin: " + window.location.origin);
+    const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
+    debug("\ud83c\udf10 iframe origin: " + window.location.origin);
+    debug("\ud83d\udd20 Initializing Microsoft Teams SDK...");
 
+    app.initialize()
+      .then(() => {
+        debug("\ud83d\udfe2 Teams SDK initialized.");
+        app.getContext()
+          .then(() => {
+            debug("\ud83d\udfe2 Got Teams context.");
 
-  debug("🟠 Initializing Microsoft Teams SDK...");
-  app.initialize()
-    .then(() => {
-      debug("🟢 Teams SDK initialized.");
-      app.getContext()
-        .then(() => {
-          debug("🟢 Got Teams context.");
+            authentication.getAuthToken({
+              successCallback: (token) => {
+                debug("\u2705 Auth token acquired.");
+                debug("\ud83d\udce6 Token: " + token);
 
-          authentication.getAuthToken({
-  successCallback: (token) => {
-    debug("✅ Auth token acquired.");
-    debug("📦 Token: " + token);
-
-    fetch("https://graph.microsoft.com/v1.0/me", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-      .then(res => res.json())
-      .then(data => {
-        debug("✅ Graph data: " + JSON.stringify(data));
-        setUser({
-          displayName: data.displayName || data.userPrincipalName,
-          email: data.mail || data.userPrincipalName
-        });
+                fetch("https://graph.microsoft.com/v1.0/me", {
+                  headers: {
+                    Authorization: `Bearer ${token}`
+                  }
+                })
+                  .then(res => res.json())
+                  .then(data => {
+                    debug("\u2705 Graph data: " + JSON.stringify(data));
+                    setUser({
+                      displayName: data.displayName || data.userPrincipalName,
+                      email: data.mail || data.userPrincipalName
+                    });
+                  })
+                  .catch(err => {
+                    debug("\u274c Graph error: " + JSON.stringify(err));
+                  });
+              },
+              failureCallback: (err) => {
+                debug("\u274c getAuthToken error: " + JSON.stringify(err));
+              }
+            });
+          })
+          .catch((err) => debug("\u274c getContext failed: " + JSON.stringify(err)));
       })
-      .catch(err => {
-        debug("❌ Graph error: " + JSON.stringify(err));
-      });
-  },
-  failureCallback: (err) => {
-    debug("❌ getAuthToken error: " + JSON.stringify(err));
-  }
-});
-
-
-
-
-
-  // All your other logic below remains the same (handleDateClick, handleSaveEvent, etc.)
+      .catch((err) => debug("\u274c app.initialize failed: " + JSON.stringify(err)));
+  }, []);
 
   const handleDateClick = (info) => {
     const createdAt = new Date().toISOString();
@@ -197,15 +195,15 @@ debug("🌐 iframe origin: " + window.location.origin);
 
       <div style={{ background: '#2d2d2d', padding: 12, borderRadius: 6, marginBottom: 10 }}>
         {user ? (
-          <>👤 <strong>{user.displayName}</strong> ({user.email})</>
+          <>\ud83d\udc64 <strong>{user.displayName}</strong> ({user.email})</>
         ) : (
-          <>🔄 Authenticating…</>
+          <>\ud83d\udd04 Authenticating…</>
         )}
       </div>
 
       {authDebug.length > 0 && (
         <div style={{ background: '#3a3a3a', padding: 10, borderRadius: 6, fontSize: 12, fontFamily: 'monospace', marginBottom: 20 }}>
-          <strong>🔧 Auth Debug Log:</strong>
+          <strong>\ud83d\udd27 Auth Debug Log:</strong>
           <pre style={{ whiteSpace: 'pre-wrap', marginTop: 5 }}>{authDebug.join("\n")}</pre>
         </div>
       )}
@@ -233,9 +231,9 @@ debug("🌐 iframe origin: " + window.location.origin);
             const tooltip = document.createElement("div");
             tooltip.innerHTML = `
               <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
-                📝 <strong>${title}</strong><br/>
-                💬 ${notes || "No notes"}<br/>
-                👤 ${createdBy || "Unknown"}
+                \ud83d\udcdd <strong>${title}</strong><br/>
+                \ud83d\udcac ${notes || "No notes"}<br/>
+                \ud83d\udc64 ${createdBy || "Unknown"}
               </div>
             `;
             tooltip.style.position = "absolute";
@@ -265,3 +263,4 @@ debug("🌐 iframe origin: " + window.location.origin);
 };
 
 export default App;
+
