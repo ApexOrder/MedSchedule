@@ -30,48 +30,52 @@ const App = () => {
 
   useEffect(() => {
     const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
-    debug("\ud83c\udf10 iframe origin: " + window.location.origin);
-    debug("\ud83d\udd20 Initializing Microsoft Teams SDK...");
+    debug("🌐 iframe origin: " + window.location.origin);
+    debug("🔰 Initializing Microsoft Teams SDK...");
 
     app.initialize()
       .then(() => {
-        debug("\ud83d\udfe2 Teams SDK initialized.");
+        debug("🟢 Teams SDK initialized.");
         app.getContext()
           .then(() => {
-            debug("\ud83d\udfe2 Got Teams context.");
+            debug("🟢 Got Teams context.");
 
             authentication.getAuthToken({
-  successCallback: (token) => {
-  debug("✅ Auth token acquired.");
+              successCallback: (token) => {
+                debug("✅ Auth token acquired.");
 
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    debug("🧾 Token audience: " + payload.aud);  // Should be "https://graph.microsoft.com"
-  } catch (e) {
-    debug("❌ Failed to decode token: " + e.message);
-  }
+                try {
+                  const payload = JSON.parse(atob(token.split('.')[1]));
+                  debug("🧾 Token audience: " + payload.aud);
+                } catch (e) {
+                  debug("❌ Failed to decode token: " + e.message);
+                }
 
-      .then((res) => res.json())
-      .then((data) => {
-        setUser({
-          displayName: data.displayName,
-          email: data.mail || data.userPrincipalName
-        });
-      })
-      .catch((err) => {
-        console.error("❌ Graph error:", err);
-      });
-  },
-  failureCallback: (err) => {
-    console.error("❌ getAuthToken error:", err);
-  }
-});
-
-
+                fetch("https://graph.microsoft.com/v1.0/me", {
+                  headers: {
+                    Authorization: `Bearer ${token}`
+                  }
+                })
+                  .then((res) => res.json())
+                  .then((data) => {
+                    setUser({
+                      displayName: data.displayName,
+                      email: data.mail || data.userPrincipalName
+                    });
+                    debug("✅ Graph user fetched: " + (data.displayName || data.userPrincipalName));
+                  })
+                  .catch((err) => {
+                    debug("❌ Graph error: " + JSON.stringify(err));
+                  });
+              },
+              failureCallback: (err) => {
+                debug("❌ getAuthToken error: " + JSON.stringify(err));
+              }
+            });
           })
-          .catch((err) => debug("\u274c getContext failed: " + JSON.stringify(err)));
+          .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
       })
-      .catch((err) => debug("\u274c app.initialize failed: " + JSON.stringify(err)));
+      .catch((err) => debug("❌ app.initialize failed: " + JSON.stringify(err)));
   }, []);
 
   const handleDateClick = (info) => {
@@ -197,15 +201,15 @@ const App = () => {
 
       <div style={{ background: '#2d2d2d', padding: 12, borderRadius: 6, marginBottom: 10 }}>
         {user ? (
-          <>\ud83d\udc64 <strong>{user.displayName}</strong> ({user.email})</>
+          <>👤 <strong>{user.displayName}</strong> ({user.email})</>
         ) : (
-          <>\ud83d\udd04 Authenticating…</>
+          <>🔄 Authenticating…</>
         )}
       </div>
 
       {authDebug.length > 0 && (
         <div style={{ background: '#3a3a3a', padding: 10, borderRadius: 6, fontSize: 12, fontFamily: 'monospace', marginBottom: 20 }}>
-          <strong>\ud83d\udd27 Auth Debug Log:</strong>
+          <strong>🔧 Auth Debug Log:</strong>
           <pre style={{ whiteSpace: 'pre-wrap', marginTop: 5 }}>{authDebug.join("\n")}</pre>
         </div>
       )}
