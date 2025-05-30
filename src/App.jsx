@@ -42,11 +42,15 @@ const App = () => {
 
             authentication.getAuthToken({
   successCallback: (token) => {
-    fetch("https://graph.microsoft.com/v1.0/me", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+  debug("✅ Auth token acquired.");
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    debug("🧾 Token audience: " + payload.aud);  // Should be "https://graph.microsoft.com"
+  } catch (e) {
+    debug("❌ Failed to decode token: " + e.message);
+  }
+
       .then((res) => res.json())
       .then((data) => {
         setUser({
