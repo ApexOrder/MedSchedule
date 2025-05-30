@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
+import timeGridPlugin from "@timegrid/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import "./index.css";
 import "./App.css";
@@ -28,30 +28,28 @@ const App = () => {
     originDate: ""
   });
 
-  // ✅ Move debug function here
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
   useEffect(() => {
-   debug("🌐 iframe origin: " + window.location.origin);
-debug("🔰 Initializing Microsoft Teams SDK...");
-
+    debug("🌐 iframe origin: " + window.location.origin);
+    debug("🔰 Initializing Microsoft Teams SDK...");
 
     app.initialize()
       .then(() => {
-        debug("\ud83d\udfe2 Teams SDK initialized.");
+        debug("🟢 Teams SDK initialized.");
         return app.getContext();
       })
       .then(() => {
-        debug("\ud83d\udfe2 Got Teams context.");
+        debug("🟢 Got Teams context.");
         authentication.getAuthToken({
           successCallback: (token) => {
-            debug("\u2705 Auth token acquired.");
+            debug("✅ Auth token acquired.");
 
             try {
               const payload = JSON.parse(atob(token.split('.')[1]));
-              debug("\ud83d\udccf Token audience: " + payload.aud);
+              debug("🧾 Token audience: " + payload.aud);
             } catch (e) {
-              debug("\u274c Failed to decode token: " + e.message);
+              debug("❌ Failed to decode token: " + e.message);
             }
 
             fetch("/api/getUser", {
@@ -76,30 +74,28 @@ debug("🔰 Initializing Microsoft Teams SDK...");
           }
         });
       })
-      .catch((err) => debug("\u274c Initialization failed: " + JSON.stringify(err)));
+      .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
   const handleDateClick = (info) => {
-  debug("📅 Date clicked: " + info.dateStr);
-  const createdAt = new Date().toISOString();
-  setNewEvent({
-    title: "",
-    notes: "",
-    date: info.dateStr,
-    isRecurring: false,
-    interval: 7,
-    endDate: "",
-    color: "#f97316",
-    createdBy: user?.displayName || "Unknown",
-    createdAt,
-    originDate: info.dateStr
-  });
-  setSelectedEventIndex(null);
-  setShowModal(true);
-  setEditSeries(false);
-};
-
-
+    debug("📅 Date clicked: " + info.dateStr);
+    const createdAt = new Date().toISOString();
+    setNewEvent({
+      title: "",
+      notes: "",
+      date: info.dateStr,
+      isRecurring: false,
+      interval: 7,
+      endDate: "",
+      color: "#f97316",
+      createdBy: user?.displayName || "Unknown",
+      createdAt,
+      originDate: info.dateStr
+    });
+    setSelectedEventIndex(null);
+    setShowModal(true);
+    setEditSeries(false);
+  };
 
   const handleEventClick = (clickInfo) => {
     const index = events.findIndex(
@@ -219,20 +215,85 @@ debug("🔰 Initializing Microsoft Teams SDK...");
       )}
 
       <div style={{ margin: '0 auto', maxWidth: '1200px' }}>
+        {showModal && (
+          <>
+            {/* Overlay */}
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100vh",
+                backgroundColor: "rgba(0,0,0,0.5)",
+                zIndex: 9998,
+              }}
+              onClick={() => setShowModal(false)} // close modal on background click
+            />
+
+            {/* Modal */}
+            <div
+              style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                background: "#2d2d2d",
+                padding: 20,
+                borderRadius: 8,
+                zIndex: 10000,
+                width: "400px",
+                boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+              }}
+            >
+              <h3 style={{ color: "#fff", marginBottom: 10 }}>
+                {selectedEventIndex !== null ? "Edit Event" : "New Event"}
+              </h3>
+              <input
+                type="text"
+                placeholder="Title"
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                style={{ width: "100%", marginBottom: 10, padding: 8 }}
+              />
+              <textarea
+                placeholder="Notes"
+                value={newEvent.notes}
+                onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
+                style={{ width: "100%", marginBottom: 10, padding: 8 }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <button
+                  onClick={handleSaveEvent}
+                  style={{ background: "#10b981", padding: 10, color: "#fff", border: "none", borderRadius: 4 }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setShowModal(false)}
+                  style={{ background: "#ef4444", padding: 10, color: "#fff", border: "none", borderRadius: 4 }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           headerToolbar={{ start: "dayGridMonth,timeGridWeek,timeGridDay", center: "title", end: "prev,next today" }}
           initialView="dayGridMonth"
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          events={events.map(evt => ({
+          events={events.map((evt) => ({
             title: evt.title,
             start: evt.date,
             color: evt.color,
             extendedProps: {
               notes: evt.notes,
-              createdBy: evt.createdBy
-            }
+              createdBy: evt.createdBy,
+            },
           }))}
           eventDidMount={(info) => {
             const { notes, createdBy } = info.event.extendedProps;
@@ -241,9 +302,9 @@ debug("🔰 Initializing Microsoft Teams SDK...");
             const tooltip = document.createElement("div");
             tooltip.innerHTML = `
               <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
-                \ud83d\udcdd <strong>${title}</strong><br/>
-                \ud83d\udcac ${notes || "No notes"}<br/>
-                \ud83d\udc64 ${createdBy || "Unknown"}
+                📝 <strong>${title}</strong><br/>
+                💬 ${notes || "No notes"}<br/>
+                👤 ${createdBy || "Unknown"}
               </div>
             `;
             tooltip.style.position = "absolute";
@@ -273,4 +334,3 @@ debug("🔰 Initializing Microsoft Teams SDK...");
 };
 
 export default App;
-
