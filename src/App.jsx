@@ -29,34 +29,30 @@ const App = () => {
   });
 
   useEffect(() => {
-    const debug = [];
-    app.initialize().then(() => {
-      debug.push("✅ app.initialize");
-      app.getContext().then(() => {
-        debug.push("✅ app.getContext");
-        authentication.getAuthToken().then(() => {
-          debug.push("✅ getAuthToken");
-          authentication.getUser().then((u) => {
-            debug.push("✅ getUser: " + JSON.stringify(u));
-            setUser(u);
-            setAuthDebug(debug);
-          }).catch(err => {
-            debug.push("❌ getUser error: " + err.message);
-            setAuthDebug(debug);
+  app.initialize().then(() => {
+    app.getContext().then(() => {
+      microsoftTeams.authentication.getAuthToken({
+        successCallback: (token) => {
+          console.log("✅ Auth token:", token);
+
+          microsoftTeams.authentication.getUser({
+            successCallback: (user) => {
+              console.log("✅ User:", user);
+              setUser(user); // <- this updates your UI
+            },
+            failureCallback: (err) => {
+              console.error("❌ getUser error:", err);
+            }
           });
-        }).catch(err => {
-          debug.push("❌ getAuthToken error: " + err.message);
-          setAuthDebug(debug);
-        });
-      }).catch(err => {
-        debug.push("❌ getContext error: " + err.message);
-        setAuthDebug(debug);
+        },
+        failureCallback: (err) => {
+          console.error("❌ getAuthToken error:", err);
+        }
       });
-    }).catch(err => {
-      debug.push("❌ initialize error: " + err.message);
-      setAuthDebug(debug);
     });
-  }, []);
+  });
+}, []);
+
 
   const handleDateClick = (info) => {
     const createdAt = new Date().toISOString();
