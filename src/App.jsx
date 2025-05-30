@@ -40,12 +40,12 @@ const App = () => {
       app.getContext().then(() => {
         debug("🟢 Got Teams context.");
 
-        microsoftTeams.authentication.getAuthToken({
+        authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
             debug("🔓 Attempting to get user...");
 
-            microsoftTeams.authentication.getUser({
+            authentication.getUser({
               successCallback: (user) => {
                 debug("✅ User retrieved: " + user.displayName);
                 setUser(user);
@@ -99,7 +99,7 @@ const App = () => {
   };
 
   const handleSaveEvent = () => {
-    const { title, date, isRecurring, interval, endDate, color } = newEvent;
+    const { title, date, isRecurring, interval, endDate } = newEvent;
     if (!title || !date) return;
 
     let updatedEvents = [...events];
@@ -203,7 +203,56 @@ const App = () => {
         </div>
       )}
 
-      <!-- FullCalendar and Modal code continues here (unchanged) -->
+      <div style={{ margin: '0 auto', maxWidth: '1200px' }}>
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          headerToolbar={{ start: "dayGridMonth,timeGridWeek,timeGridDay", center: "title", end: "prev,next today" }}
+          initialView="dayGridMonth"
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          events={events.map(evt => ({
+            title: evt.title,
+            start: evt.date,
+            color: evt.color,
+            extendedProps: {
+              notes: evt.notes,
+              createdBy: evt.createdBy
+            }
+          }))}
+          eventDidMount={(info) => {
+            const { notes, createdBy } = info.event.extendedProps;
+            const title = info.event.title;
+
+            const tooltip = document.createElement("div");
+            tooltip.innerHTML = `
+              <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
+                📝 <strong>${title}</strong><br/>
+                💬 ${notes || "No notes"}<br/>
+                👤 ${createdBy || "Unknown"}
+              </div>
+            `;
+            tooltip.style.position = "absolute";
+            tooltip.style.display = "none";
+            tooltip.style.zIndex = 1000;
+            document.body.appendChild(tooltip);
+
+            info.el.addEventListener("mouseenter", (e) => {
+              tooltip.style.display = "block";
+              tooltip.style.left = e.pageX + 10 + "px";
+              tooltip.style.top = e.pageY + 10 + "px";
+            });
+
+            info.el.addEventListener("mousemove", (e) => {
+              tooltip.style.left = e.pageX + 10 + "px";
+              tooltip.style.top = e.pageY + 10 + "px";
+            });
+
+            info.el.addEventListener("mouseleave", () => {
+              tooltip.style.display = "none";
+            });
+          }}
+        />
+      </div>
     </div>
   );
 };
