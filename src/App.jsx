@@ -312,64 +312,27 @@ const App = () => {
   tooltip.style.zIndex = 1000;
   document.body.appendChild(tooltip);
 
-  let isTooltipStuck = false;
-
-  const showTooltip = (e) => {
+  info.el.addEventListener("mouseenter", (e) => {
     tooltip.style.display = "block";
     tooltip.style.left = e.pageX + 10 + "px";
     tooltip.style.top = e.pageY + 10 + "px";
-  };
-
-  const moveTooltip = (e) => {
-    if (!isTooltipStuck) {
-      tooltip.style.left = e.pageX + 10 + "px";
-      tooltip.style.top = e.pageY + 10 + "px";
-    }
-  };
-
-  const hideTooltip = () => {
-    if (!isTooltipStuck) {
-      tooltip.style.display = "none";
-    }
-  };
-
-  const toggleTooltipStuck = () => {
-    isTooltipStuck = !isTooltipStuck;
-    if (!isTooltipStuck) {
-      tooltip.style.display = "none";
-    }
-  };
-
-  const globalClickListener = (e) => {
-    if (isTooltipStuck && !info.el.contains(e.target)) {
-      isTooltipStuck = false;
-      tooltip.style.display = "none";
-      document.removeEventListener("click", globalClickListener);
-    }
-  };
-
-  info.el.addEventListener("mouseenter", (e) => {
-    showTooltip(e);
   });
 
   info.el.addEventListener("mousemove", (e) => {
-    moveTooltip(e);
+    tooltip.style.left = e.pageX + 10 + "px";
+    tooltip.style.top = e.pageY + 10 + "px";
   });
 
   info.el.addEventListener("mouseleave", () => {
-    hideTooltip();
+    tooltip.style.display = "none";
   });
 
-  info.el.addEventListener("click", (e) => {
-    e.stopPropagation(); // prevent immediate global click hide
-    toggleTooltipStuck();
-    if (isTooltipStuck) {
-      document.addEventListener("click", globalClickListener);
-    } else {
-      document.removeEventListener("click", globalClickListener);
-    }
+  // Optional: Hide tooltip on click just to be safe
+  info.el.addEventListener("click", () => {
+    tooltip.style.display = "none";
   });
 }}
+
 
         />
       </div>
