@@ -30,59 +30,48 @@ const App = () => {
 
   useEffect(() => {
     const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
-    debug("🌐 iframe origin: " + window.location.origin);
-    debug("🔰 Initializing Microsoft Teams SDK...");
-    try {
-  const payload = JSON.parse(atob(token.split('.')[1]));
-  debug("🧾 Token audience: " + payload.aud);
-} catch (e) {
-  debug("❌ Failed to decode token: " + e.message);
-}
-
+    debug("\ud83c\udf10 iframe origin: " + window.location.origin);
+    debug("\ud83d\udd20 Initializing Microsoft Teams SDK...");
 
     app.initialize()
       .then(() => {
-        debug("🟢 Teams SDK initialized.");
-        app.getContext()
-          .then(() => {
-            debug("🟢 Got Teams context.");
-
-            authentication.getAuthToken({
-              successCallback: (token) => {
-                debug("✅ Auth token acquired.");
-
-                try {
-                  const payload = JSON.parse(atob(token.split('.')[1]));
-                  debug("🧾 Token audience: " + payload.aud);
-                } catch (e) {
-                  debug("❌ Failed to decode token: " + e.message);
-                }
-
-                fetch("https://graph.microsoft.com/v1.0/me", {
-                  headers: {
-                    Authorization: `Bearer ${token}`
-                  }
-                })
-                  .then((res) => res.json())
-                  .then((data) => {
-                    setUser({
-                      displayName: data.displayName,
-                      email: data.mail || data.userPrincipalName
-                    });
-                    debug("✅ Graph user fetched: " + (data.displayName || data.userPrincipalName));
-                  })
-                  .catch((err) => {
-                    debug("❌ Graph error: " + JSON.stringify(err));
-                  });
-              },
-              failureCallback: (err) => {
-                debug("❌ getAuthToken error: " + JSON.stringify(err));
-              }
-            });
-          })
-          .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
+        debug("\ud83d\udfe2 Teams SDK initialized.");
+        return app.getContext();
       })
-      .catch((err) => debug("❌ app.initialize failed: " + JSON.stringify(err)));
+      .then(() => {
+        debug("\ud83d\udfe2 Got Teams context.");
+        authentication.getAuthToken({
+          successCallback: (token) => {
+            debug("\u2705 Auth token acquired.");
+
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              debug("\ud83d\udccf Token audience: " + payload.aud);
+            } catch (e) {
+              debug("\u274c Failed to decode token: " + e.message);
+            }
+
+            fetch("https://graph.microsoft.com/v1.0/me", {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                setUser({
+                  displayName: data.displayName,
+                  email: data.mail || data.userPrincipalName
+                });
+                debug("\u2705 Graph user fetched: " + (data.displayName || data.userPrincipalName));
+              })
+              .catch((err) => debug("\u274c Graph error: " + JSON.stringify(err)));
+          },
+          failureCallback: (err) => {
+            debug("\u274c getAuthToken error: " + JSON.stringify(err));
+          }
+        });
+      })
+      .catch((err) => debug("\u274c Initialization failed: " + JSON.stringify(err)));
   }, []);
 
   const handleDateClick = (info) => {
