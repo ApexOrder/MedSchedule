@@ -41,76 +41,35 @@ debug("🌐 iframe origin: " + window.location.origin);
         .then(() => {
           debug("🟢 Got Teams context.");
 
-          authentication.getAuthToken({
-            successCallback: (token) => {
-              // Decode token for debug display
-              const tokenParts = token.split(".");
-              if (tokenParts.length === 3) {
-                try {
-                  const payload = JSON.parse(atob(tokenParts[1]));
-                  const aud = payload.aud || "Not found";
-                  const scp = payload.scp || "Not found";
-                  const upn = payload.upn || payload.preferred_username || "Not found";
-
-                  debug("🪪 Token Debug Info:");
-                  debug("- aud: " + aud);
-                  debug("- scp: " + scp);
-                  debug("- userPrincipalName: " + upn);
-                } catch (e) {
-                  debug("❌ Failed to decode token payload.");
-                }
-              } else {
-                debug("❌ Invalid token format.");
-              }
-
-              debug("✅ Auth token acquired.");
-              debug("🔓 Fetching user from Graph...");
-              
-              fetch("https://graph.microsoft.com/v1.0/me", {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              })
-                .then((res) => res.json())
-                .then((data) => {
-                  const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
-                  const email = data.mail || data.userPrincipalName || "unknown@example.com";
-
-                  setUser({
-                    displayName: name,
-                    email
-                  });
-
-                  debug("✅ User fetched from Graph: " + name);
-                })
-                .catch((err) => {
-                  debug("❌ Graph /me error: " + JSON.stringify(err));
-                });
-            },
-            failureCallback: (err) => {
-  debug("❌ getAuthToken error: " + JSON.stringify(err));
-
-  // Try to force token fetch again and log audience
-  authentication.getAuthToken({
-    successCallback: (token) => {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      debug("🧪 RETRY TOKEN PAYLOAD:");
-      debug("- aud: " + payload.aud);
-      debug("- scp: " + payload.scp);
-      debug("- iss: " + payload.iss);
-    },
-    failureCallback: (e) => {
-      debug("❌ RETRY also failed: " + JSON.stringify(e));
-    }
-  });
-}
-
-          });
-        })
-        .catch((err) => debug("❌ getContext failed: " + JSON.stringify(err)));
+          authentication.authenticate({
+  url: "https://med-schedule-theta.vercel.app/auth.html",
+  width: 600,
+  height: 535,
+  successCallback: (token) => {
+    debug("✅ Graph token acquired via popup.");
+    
+    fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     })
-    .catch((err) => debug("❌ app.initialize failed: " + JSON.stringify(err)));
-}, []);
+      .then(res => res.json())
+      .then(data => {
+        const name = data.displayName || data.givenName || data.userPrincipalName || "Unknown";
+        const email = data.mail || data.userPrincipalName || "unknown@example.com";
+
+        setUser({ displayName: name, email });
+        debug("✅ User loaded from Graph: " + name);
+      })
+      .catch(err => {
+        debug("❌ Graph request failed: " + JSON.stringify(err));
+      });
+  },
+  failureCallback: (err) => {
+    debug("❌ authenticate() failed: " + JSON.stringify(err));
+  }
+});
+
 
 
 
