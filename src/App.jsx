@@ -11,16 +11,15 @@ import "./App.css";
 import {
   collection,
   query,
-  where,
   orderBy,
   onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
-  setDoc
+  setDoc,
 } from "firebase/firestore";
-import { db } from "./firebase.js"; // Your firebase config file
+import { db } from "./firebase.js";
 
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
@@ -44,26 +43,21 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-const TagManager = ({ tags, setTags, channelId, debug }) => {
+const TagManager = ({ tags, setTags }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
-  // Firestore sync functions for tags
   const addTagToFirestore = async (tag) => {
-    const tagWithChannel = { ...tag, channelId };
-    const docRef = await addDoc(collection(db, "tags"), tagWithChannel);
+    const docRef = await addDoc(collection(db, "tags"), tag);
     return docRef.id;
   };
 
   const addTag = async () => {
-    if (!newName.trim() || !channelId) {
-      debug("❌ Cannot add tag: missing name or channelId.");
-      return;
-    }
-    const newTag = { id: null, name: newName.trim(), color: newColor, channelId };
+    if (!newName.trim()) return;
+    const newTag = { id: null, name: newName.trim(), color: newColor };
     const id = await addTagToFirestore(newTag);
     newTag.id = id;
-    setTags((prev) => [...prev, newTag]);
+    setTags([...tags, newTag]);
     setNewName("");
   };
 
@@ -147,8 +141,6 @@ const App = () => {
   const [editMode, setEditMode] = useState("single"); // "single" or "future"
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
-
-  // New: store channelId from Teams context
   const [channelId, setChannelId] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
@@ -164,7 +156,6 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
-    channelId: null,
   });
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
@@ -182,10 +173,21 @@ const App = () => {
         return app.getContext();
       })
       .then((context) => {
-        debug("🟢 Got Teams context.");
-        debug(`TeamId: ${context.teamId || "N/A"}, ChannelId: ${context.channelId || "N/A"}`);
-        setChannelId(context.channelId || null);
+        debug("🟢 Got Teams context:");
+        debug(JSON.stringify(context, null, 2));
 
+        // Extract channelId reliably
+        const chId = context.channelId || (context.channel && context.channel.id) || null;
+        debug("ChannelId detected: " + chId);
+
+        if (!chId) {
+          debug("❌ No ChannelId detected. App must run inside a Teams channel tab.");
+          return;
+        }
+
+        setChannelId(chId);
+
+        // Then get auth token etc as before...
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
@@ -222,24 +224,23 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Firestore real-time subscriptions filtered by channelId
+  // Subscribe to Firestore events and tags filtered by channelId
   useEffect(() => {
-    if (!channelId) {
-      debug("❌ No channelId available, skipping Firestore subscriptions.");
-      return;
-    }
+    if (!channelId) return;
 
     const eventsQuery = query(
       collection(db, "events"),
-      where("channelId", "==", channelId),
       orderBy("date", "asc")
     );
+
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const eventsData = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((evt) => evt.channelId === channelId);
       setEvents(eventsData);
     });
 
-    const tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
+    const tagsQuery = query(collection(db, "tags"));
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
@@ -262,11 +263,6 @@ const App = () => {
     if (isPastDate(info.dateStr)) {
       alert("⚠️ Cannot create events on past dates.");
       debug(`Blocked create on past date ${info.dateStr}`);
-      return;
-    }
-    if (!channelId) {
-      alert("⚠️ Cannot create events: channel ID not detected.");
-      debug("❌ No channelId, cannot create event.");
       return;
     }
 
@@ -310,18 +306,12 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
-    if (!channelId) {
-      debug("❌ No channelId, cannot save event.");
-      return;
-    }
-    const eventWithChannel = { ...event, channelId };
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
-      await setDoc(eventRef, eventWithChannel, { merge: true });
+      await setDoc(eventRef, event, { merge: true });
     } else {
-      const docRef = await addDoc(collection(db, "events"), eventWithChannel);
+      const docRef = await addDoc(collection(db, "events"), event);
       event.id = docRef.id;
     }
   };
@@ -341,15 +331,11 @@ const App = () => {
       id,
       originDate,
       tagName,
+      channelId: eventChannelId,
     } = newEvent;
 
     if (!title) {
       debug("❌ Title is required.");
-      return;
-    }
-
-    if (!channelId) {
-      debug("❌ No channelId, cannot save event.");
       return;
     }
 
@@ -373,17 +359,14 @@ const App = () => {
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
         updatedEvents = updatedEvents.map((e) => {
-          if (
-            e.originDate === originDate &&
-            new Date(e.date) >= new Date(newEvent.date)
-          ) {
+          if (e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)) {
             return {
               ...newEvent,
               id: e.id,
               date: e.date,
               createdBy: e.createdBy,
               createdAt: e.createdAt,
-              channelId,
+              channelId: eventChannelId,
             };
           }
           return e;
@@ -397,7 +380,7 @@ const App = () => {
                 isRecurring,
                 interval: isRecurring ? interval : 0,
                 endDate: isRecurring ? endDate : "",
-                channelId,
+                channelId: eventChannelId,
               }
             : e
         );
@@ -419,8 +402,8 @@ const App = () => {
             endDate,
             createdBy: user?.displayName || "Unknown",
             createdAt,
-            tagName: tagName || null,
-            channelId,
+            tagName,
+            channelId: eventChannelId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -431,8 +414,7 @@ const App = () => {
           createdBy: user?.displayName || "Unknown",
           createdAt: new Date().toISOString(),
           originDate: "",
-          tagName: tagName || null,
-          channelId,
+          channelId: eventChannelId,
         });
       }
     }
@@ -458,7 +440,7 @@ const App = () => {
       createdAt: "",
       originDate: "",
       tagName: null,
-      channelId: null,
+      channelId: eventChannelId,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -545,6 +527,14 @@ const App = () => {
     }
   };
 
+  if (!channelId) {
+    return (
+      <div style={{ padding: 20, color: "red", fontWeight: "bold" }}>
+        ⚠️ This app must be opened as a tab inside a Microsoft Teams channel to function correctly.
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
       <h2
@@ -571,7 +561,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} channelId={channelId} debug={debug} />
+        <TagManager tags={tags} setTags={setTags} />
       </div>
 
       {authDebug.length > 0 && (
@@ -903,7 +893,6 @@ const App = () => {
                   padding: "6px 12px",
                   borderRadius: 30,
                   background: `linear-gradient(90deg, rgba(${rgb}, 0) 0%, ${tagColor} 100%)`,
-
                   color: "#fff",
                   fontWeight: 600,
                   fontSize: 14,
@@ -922,7 +911,6 @@ const App = () => {
               </div>
             );
           }}
-
           eventDidMount={(info) => {
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
