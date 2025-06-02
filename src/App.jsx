@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from '@fullcalendar/timegrid';
+import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "./App.css";
@@ -281,12 +281,13 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
-        // Update this and future events in series from this date forward
+        // Update this and future events in the series (date >= newEvent.date)
         updatedEvents = updatedEvents.map(e => {
           if (
             e.originDate === originDate &&
-            new Date(e.date) >= new Date(newEvent.date)
+            new Date(e.date) >= new Date(date)
           ) {
+            // Update event properties but keep id, createdBy, createdAt, and date intact
             return {
               ...newEvent,
               id: e.id,
