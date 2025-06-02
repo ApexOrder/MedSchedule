@@ -123,21 +123,25 @@ button:focus {
   outline-offset: 2px;
 }
 
-/* Tag pill hover effect */
+/* Tag pill styling with gradient background set inline in React */
 .tag-pill {
   display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
   user-select: none;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
   cursor: default;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
 }
 
 .tag-pill:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* FullCalendar header buttons */
@@ -180,7 +184,6 @@ button:focus {
   border-color: #2c2c2c transparent transparent transparent;
 }
 
-
 input,
 textarea,
 select {
@@ -208,4 +211,3 @@ select:focus {
   color: #111;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
-
