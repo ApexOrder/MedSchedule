@@ -14,7 +14,7 @@ const App = () => {
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
-  const [editMode, setEditMode] = useState("single");
+  const [editMode, setEditMode] = useState("single"); // "single" or "series"
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
 
@@ -96,7 +96,22 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
+  // Helper: check if a date string is in the past (before today)
+  const isPastDate = (dateStr) => {
+    const eventDate = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventDate < today;
+  };
+
+  // Block modal on past dates for empty calendar cells
   const handleDateClick = (info) => {
+    if (isPastDate(info.dateStr)) {
+      alert("⚠️ Cannot create events on past dates.");
+      debug(`Blocked create on past date ${info.dateStr}`);
+      return;
+    }
+
     debug("📅 Date clicked: " + info.dateStr);
     const createdAt = new Date().toISOString();
     setNewEvent({
@@ -118,13 +133,7 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  const isPastDate = (dateStr) => {
-    const eventDate = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return eventDate < today;
-  };
-
+  // Block modal on past event clicks and fade/disable past events in calendar
   const handleEventClick = (clickInfo) => {
     const event = events.find((e) => e.id === clickInfo.event.id);
     if (!event) return;
