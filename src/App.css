@@ -266,3 +266,37 @@ select:focus {
   color: #111;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
+
+/* Delete button styling in modal */
+.modal-fade button.delete-event {
+  background-color: #b91c1c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 10px;
+  width: 100%;
+  margin-top: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: filter 0.3s ease, transform 0.15s ease;
+  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.6);
+}
+
+.modal-fade button.delete-event:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(185, 28, 28, 0.8);
+}
+
+.modal-fade button.delete-event:active {
+  filter: brightness(0.9);
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.6);
+}
+
+.modal-fade button.delete-event:focus {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
