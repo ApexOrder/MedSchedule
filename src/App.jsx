@@ -772,27 +772,40 @@ const App = () => {
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
-                    fontWeight: "bold",
+                    fontWeight: "600",
                     color: "#fff",
                     flexGrow: 1,
+                    fontSize: 13,
+                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
                   }}
                 >
                   {arg.event.title}
                 </div>
 
-                {/* Colored gradient pill for the tag */}
+                {/* Updated pill style */}
                 <span
                   style={{
                     display: "inline-block",
-                    width: 22,
-                    height: 22,
-                    borderRadius: 20,
-                    background: `linear-gradient(to right, rgba(${rgb}, 0) 0%, ${tagColor} 100%)`,
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                    minWidth: 70,
+                    padding: "6px 18px",
+                    borderRadius: 30,
+                    background: `linear-gradient(135deg, rgba(${rgb}, 0.8), ${tagColor})`,
+                    boxShadow: `0 4px 8px rgba(${rgb}, 0.3), inset 0 0 10px rgba(255,255,255,0.25)`,
+                    color: "#fff",
+                    fontWeight: 600,
+                    fontSize: 13,
                     userSelect: "none",
+                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                    textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                   title={tagName}
-                />
+                >
+                  {tagName}
+                </span>
               </div>
             );
           }}
