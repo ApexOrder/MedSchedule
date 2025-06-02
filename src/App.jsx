@@ -5,6 +5,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
+
 import "./App.css";
 
 import {
@@ -16,6 +17,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  setDoc
 } from "firebase/firestore";
 import { db } from "./firebase.js"; // Your firebase config file
 
