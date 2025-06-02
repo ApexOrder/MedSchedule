@@ -709,11 +709,12 @@ const title = info.event.title;
 const tooltip = document.createElement("div");
 tooltip.className = "tooltip-custom";
 tooltip.innerHTML = `
-  <strong>${title}</strong><br/>
-  ${tagName ? `<em style="color:#f97316;">🏷️ ${tagName}</em><br/>` : ""}
-  📝 ${notes || "No notes"}<br/>
-  👤 ${createdBy || "Unknown"}
+  <strong style="color:#f97316; font-weight:700; font-size:16px;">${title}</strong><br/>
+  ${tagName ? `<em style="color:#fb923c; font-style:normal; font-weight:600; margin-top:4px; display:block;">🏷️ ${tagName}</em>` : ""}
+  <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
+  <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
 `;
+
 document.body.appendChild(tooltip);
 info.el._tooltip = tooltip;
 
