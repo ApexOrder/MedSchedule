@@ -19,7 +19,17 @@ import {
   doc,
   setDoc,
 } from "firebase/firestore";
-import { db } from "./firebase.js"; // Your firebase config file
+import { db } from "./firebase.js";
+
+// Helper to sanitize team name for Firestore path
+function sanitizeTeamName(name) {
+  if (!name) return "default_team";
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .substring(0, 50);
+}
 
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
@@ -47,26 +57,26 @@ const TagManager = ({ tags, setTags, teamId, calendarId, debug }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
+  const tagsCollectionRef = collection(
+    db,
+    "teams",
+    teamId,
+    "calendars",
+    calendarId,
+    "tags"
+  );
+
   const addTagToFirestore = async (tag) => {
-    const docRef = await addDoc(
-      collection(db, "teams", teamId, "calendars", calendarId, "tags"),
-      tag
-    );
+    const docRef = await addDoc(tagsCollectionRef, tag);
     return docRef.id;
   };
 
   const addTag = async () => {
     if (!newName.trim()) return;
-    const newTag = { id: null, name: newName.trim(), color: newColor };
-    try {
-      const id = await addTagToFirestore(newTag);
-      newTag.id = id;
-      setTags((old) => [...old, newTag]);
-      setNewName("");
-      debug(`✅ Tag '${newTag.name}' added`);
-    } catch (err) {
-      debug("❌ Firestore addTag error: " + err.message);
-    }
+    const newTag = { name: newName.trim(), color: newColor };
+    const id = await addTagToFirestore(newTag);
+    setTags((prev) => [...prev, { id, ...newTag }]);
+    setNewName("");
   };
 
   return (
@@ -81,7 +91,14 @@ const TagManager = ({ tags, setTags, teamId, calendarId, debug }) => {
         type="color"
         value={newColor}
         onChange={(e) => setNewColor(e.target.value)}
-        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle", borderRadius: 4, border: "1px solid #555" }}
+        style={{
+          marginRight: 8,
+          width: 40,
+          height: 30,
+          verticalAlign: "middle",
+          borderRadius: 4,
+          border: "1px solid #555",
+        }}
       />
       <button
         onClick={addTag}
@@ -150,7 +167,7 @@ const App = () => {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
 
-  const [teamId, setTeamId] = useState(null);
+  const [teamId, setTeamId] = useState("default_team");
   const [calendarId, setCalendarId] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
@@ -172,15 +189,18 @@ const App = () => {
 
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
-  // Initialize Teams context and set teamId & calendarId per tab
   useEffect(() => {
+    debug("🌐 iframe origin: " + window.location.origin);
+    debug("🔰 Initializing Microsoft Teams SDK...");
+
     app
       .initialize()
       .then(() => app.getContext())
       .then((context) => {
-        const tId = context.teamId || "defaultTeam";
-        setTeamId(tId);
-        debug(`🟢 Teams initialized. Team ID: ${tId}`);
+        const rawTeamName = context.teamName || "default team";
+        const sanitized = sanitizeTeamName(rawTeamName);
+        setTeamId(sanitized);
+        debug(`🟢 Teams initialized. Team name: '${rawTeamName}' → '${sanitized}'`);
 
         let storedCalId = sessionStorage.getItem("calendarId");
         if (!storedCalId) {
@@ -188,31 +208,27 @@ const App = () => {
           sessionStorage.setItem("calendarId", storedCalId);
           debug(`Generated new calendar ID: ${storedCalId}`);
         } else {
-          debug(`Loaded existing calendar ID from sessionStorage: ${storedCalId}`);
+          debug(`Loaded calendar ID from sessionStorage: ${storedCalId}`);
         }
         setCalendarId(storedCalId);
       });
   }, []);
 
-  // Firestore real-time subscription to events and tags scoped by teamId and calendarId
+  // Subscribe to events & tags for this team/calendar
   useEffect(() => {
     if (!teamId || !calendarId) return;
 
-    const eventsCol = collection(db, "teams", teamId, "calendars", calendarId, "events");
-    const tagsCol = collection(db, "teams", teamId, "calendars", calendarId, "tags");
-
-    const eventsQuery = query(eventsCol, orderBy("date", "asc"));
+    const eventsRef = collection(db, "teams", teamId, "calendars", calendarId, "events");
+    const eventsQuery = query(eventsRef, orderBy("date", "asc"));
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setEvents(eventsData);
-      debug(`🔄 Loaded ${eventsData.length} events`);
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setEvents(data);
     });
 
-    const tagsQuery = query(tagsCol);
-    const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
-      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setTags(tagsData);
-      debug(`🔄 Loaded ${tagsData.length} tags`);
+    const tagsRef = collection(db, "teams", teamId, "calendars", calendarId, "tags");
+    const unsubscribeTags = onSnapshot(tagsRef, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setTags(data);
     });
 
     return () => {
@@ -274,16 +290,29 @@ const App = () => {
     setIsPastEvent(false);
   };
 
+  // Firestore helpers for events
   const saveEventToFirestore = async (event) => {
-    if (!teamId || !calendarId) {
-      debug("❌ Missing teamId or calendarId for saving event");
-      return;
-    }
     if (event.id) {
-      const eventRef = doc(db, "teams", teamId, "calendars", calendarId, "events", event.id);
+      const eventRef = doc(
+        db,
+        "teams",
+        teamId,
+        "calendars",
+        calendarId,
+        "events",
+        event.id
+      );
       await setDoc(eventRef, event, { merge: true });
     } else {
-      const docRef = await addDoc(collection(db, "teams", teamId, "calendars", calendarId, "events"), event);
+      const eventsRef = collection(
+        db,
+        "teams",
+        teamId,
+        "calendars",
+        calendarId,
+        "events"
+      );
+      const docRef = await addDoc(eventsRef, event);
       event.id = docRef.id;
     }
   };
@@ -329,11 +358,9 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
+        // Update this and future events in series from this date forward
         updatedEvents = updatedEvents.map((e) => {
-          if (
-            e.originDate === originDate &&
-            new Date(e.date) >= new Date(newEvent.date)
-          ) {
+          if (e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)) {
             return {
               ...newEvent,
               id: e.id,
@@ -345,6 +372,7 @@ const App = () => {
           return e;
         });
       } else {
+        // Single event update only
         updatedEvents = updatedEvents.map((e) =>
           e.id === id
             ? {
@@ -440,13 +468,11 @@ const App = () => {
   };
 
   const handleDeleteEvent = async () => {
-    if (!teamId || !calendarId) {
-      debug("❌ Missing teamId or calendarId for deleting event");
-      return;
-    }
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
     try {
-      await deleteDoc(doc(db, "teams", teamId, "calendars", calendarId, "events", selectedEventId));
+      await deleteDoc(
+        doc(db, "teams", teamId, "calendars", calendarId, "events", selectedEventId)
+      );
       debug("Event deleted from Firestore");
       setSelectedEventId(null);
       setShowModal(false);
@@ -479,10 +505,6 @@ const App = () => {
   };
 
   const handleDeleteSeries = async () => {
-    if (!teamId || !calendarId) {
-      debug("❌ Missing teamId or calendarId for deleting series");
-      return;
-    }
     const eventToDelete = events.find((e) => e.id === selectedEventId);
     if (!eventToDelete) {
       debug("❌ Event to delete series not found.");
@@ -492,7 +514,9 @@ const App = () => {
 
     const batchDeletes = events
       .filter((e) => e.originDate === eventToDelete.originDate)
-      .map((e) => deleteDoc(doc(db, "teams", teamId, "calendars", calendarId, "events", e.id)));
+      .map((e) =>
+        deleteDoc(doc(db, "teams", teamId, "calendars", calendarId, "events", e.id))
+      );
 
     try {
       await Promise.all(batchDeletes);
