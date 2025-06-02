@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from "uuid";  // UUID for unique IDs
 import "./index.css";
 import "./App.css";
 
@@ -13,7 +13,7 @@ const App = () => {
   const [authDebug, setAuthDebug] = useState([]);
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState(null);  // Use id, not index
+  const [selectedEventId, setSelectedEventId] = useState(null);
   const [editMode, setEditMode] = useState("single"); // "single" or "series"
 
   const [newEvent, setNewEvent] = useState({
@@ -101,12 +101,11 @@ const App = () => {
   };
 
   const handleEventClick = (clickInfo) => {
-    const eventId = clickInfo.event.id;
-    const index = events.findIndex((e) => e.id === eventId);
-    debug(`Event clicked with id: ${eventId} found at index: ${index}`);
+    const index = events.findIndex((e) => e.id === clickInfo.event.id);
+    debug(`Event clicked with id: ${clickInfo.event.id} found at index: ${index}`);
     if (index !== -1) {
       setNewEvent(events[index]);
-      setSelectedEventId(eventId);
+      setSelectedEventId(events[index].id);
       setShowModal(true);
       setEditMode("single");
     }
@@ -120,63 +119,41 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "series" && originDate) {
-        // Update all events in series - no deletion, update properties only
-        updatedEvents = updatedEvents.map((e) => {
-          if (e.originDate === originDate) {
-            return {
-              ...e,
-              title,
-              notes: newEvent.notes,
-              color: newEvent.color,
-              isRecurring,
-              interval,
-              endDate,
-              createdBy: newEvent.createdBy,
-              createdAt: newEvent.createdAt,
-            };
-          }
-          return e;
-        });
-      } else {
-        // Updating single event only
-        // Check if changing single event to recurring - create series instead of just one
-        if (isRecurring && endDate && (!originDate || originDate === date)) {
-          // Create recurring series starting at this date, keep old event updated to first occurrence
-          // Remove old event from updatedEvents (using id)
-          updatedEvents = updatedEvents.filter(e => e.id !== id);
+        // Remove all events in this series to avoid duplicates
+        updatedEvents = updatedEvents.filter(e => e.originDate !== originDate);
 
-          let start = new Date(date);
-          const end = new Date(endDate);
-          const createdAt = new Date().toISOString();
-          while (start <= end) {
-            updatedEvents.push({
-              ...newEvent,
-              id: uuidv4(),
-              date: start.toISOString().split("T")[0],
-              originDate: date,
-              createdBy: newEvent.createdBy,
-              createdAt,
-            });
-            start.setDate(start.getDate() + parseInt(interval));
-          }
-        } else {
-          // Just update single event as normal (including switching from recurring to single)
-          updatedEvents = updatedEvents.map(e =>
-            e.id === id
-              ? {
-                  ...newEvent,
-                  // If switched to non-recurring, clear originDate and recurrence info
-                  originDate: isRecurring ? newEvent.originDate : "",
-                  isRecurring,
-                  interval: isRecurring ? interval : 0,
-                  endDate: isRecurring ? endDate : "",
-                }
-              : e
-          );
+        // Recreate series with updated data
+        let start = new Date(date);
+        const end = new Date(endDate);
+        const createdAt = new Date().toISOString();
+
+        while (start <= end) {
+          updatedEvents.push({
+            ...newEvent,
+            id: uuidv4(),
+            date: start.toISOString().split("T")[0],
+            originDate: date,
+            createdBy: newEvent.createdBy,
+            createdAt,
+          });
+          start.setDate(start.getDate() + parseInt(interval));
         }
+      } else {
+        // Update single event only
+        updatedEvents = updatedEvents.map(e =>
+          e.id === id
+            ? {
+                ...newEvent,
+                originDate: isRecurring ? newEvent.originDate : "",
+                isRecurring,
+                interval: isRecurring ? interval : 0,
+                endDate: isRecurring ? endDate : "",
+              }
+            : e
+        );
       }
     } else {
-      // Creating new events
+      // New event creation
       if (isRecurring && endDate) {
         let start = new Date(date);
         const end = new Date(endDate);
@@ -229,7 +206,7 @@ const App = () => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
 
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
-    const updatedEvents = events.filter((e) => e.id !== selectedEventId);
+    const updatedEvents = events.filter(e => e.id !== selectedEventId);
     setEvents(updatedEvents);
     setShowModal(false);
     setSelectedEventId(null);
@@ -242,13 +219,13 @@ const App = () => {
     }
     if (!window.confirm("Are you sure you want to delete the entire series?")) return;
 
-    const eventToDelete = events.find((e) => e.id === selectedEventId);
+    const eventToDelete = events.find(e => e.id === selectedEventId);
     if (!eventToDelete) {
       debug("❌ Event to delete series not found.");
       return;
     }
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
-    const updatedEvents = events.filter((e) => e.originDate !== eventToDelete.originDate);
+    const updatedEvents = events.filter(e => e.originDate !== eventToDelete.originDate);
     setEvents(updatedEvents);
     setShowModal(false);
     setSelectedEventId(null);
@@ -256,7 +233,15 @@ const App = () => {
 
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
-      <h2 style={{ color: "#f97316", fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 }}>
+      <h2
+        style={{
+          color: "#f97316",
+          fontSize: 24,
+          fontWeight: "bold",
+          textAlign: "center",
+          marginBottom: 20,
+        }}
+      >
         Care Calendar
       </h2>
 
@@ -535,14 +520,6 @@ const App = () => {
             info.el.addEventListener("click", () => {
               tooltip.style.display = "none";
             });
-
-            // Clean up tooltip on event unmount (to prevent duplicates)
-            info.el._tooltip = tooltip;
-          }}
-          eventWillUnmount={(info) => {
-            if (info.el._tooltip) {
-              info.el._tooltip.remove();
-            }
           }}
         />
       </div>
