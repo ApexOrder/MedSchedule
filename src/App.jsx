@@ -184,17 +184,45 @@ const App = () => {
           start.setDate(start.getDate() + parseInt(interval));
         }
       } else {
-        updatedEvents = updatedEvents.map((e) =>
-          e.id === id
-            ? {
-                ...newEvent,
-                originDate: isRecurring ? newEvent.originDate || date : "",
-                isRecurring,
-                interval: isRecurring ? interval : 0,
-                endDate: isRecurring ? endDate : "",
-              }
-            : e
-        );
+        // THIS IS THE FIXED PART:
+        if (isRecurring && interval && endDate && new Date(endDate) >= new Date(date)) {
+          // Remove this single event
+          updatedEvents = updatedEvents.filter(e => e.id !== id);
+
+          // Generate full recurring series from this event's date
+          let start = new Date(date);
+          const end = new Date(endDate);
+          const createdAt = new Date().toISOString();
+          const seriesOriginDate = date; // use current event date as origin
+
+          while (start <= end) {
+            updatedEvents.push({
+              ...newEvent,
+              id: uuidv4(),
+              date: start.toISOString().split("T")[0],
+              originDate: seriesOriginDate,
+              isRecurring: true,
+              interval: parseInt(interval),
+              endDate,
+              createdBy: newEvent.createdBy,
+              createdAt,
+            });
+            start.setDate(start.getDate() + parseInt(interval));
+          }
+        } else {
+          // Just update single event normally
+          updatedEvents = updatedEvents.map((e) =>
+            e.id === id
+              ? {
+                  ...newEvent,
+                  originDate: isRecurring ? newEvent.originDate || date : "",
+                  isRecurring,
+                  interval: isRecurring ? interval : 0,
+                  endDate: isRecurring ? endDate : "",
+                }
+              : e
+          );
+        }
       }
     } else {
       if (isRecurring && endDate) {
