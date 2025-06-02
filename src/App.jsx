@@ -6,19 +6,21 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 
+import "./App.css";
+
 import {
   collection,
   query,
   orderBy,
-  where,
   onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
   setDoc,
+  where,
 } from "firebase/firestore";
-import { db } from "./firebase.js";
+import { db } from "./firebase.js"; // Your firebase config file
 
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
@@ -42,13 +44,13 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-const TagManager = ({ tags, setTags, calendarId }) => {
+const TagManager = ({ tags, setTags }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
+  // Firestore sync functions for tags
   const addTagToFirestore = async (tag) => {
-    const tagData = { ...tag, calendarId };
-    const docRef = await addDoc(collection(db, "tags"), tagData);
+    const docRef = await addDoc(collection(db, "tags"), tag);
     return docRef.id;
   };
 
@@ -73,14 +75,7 @@ const TagManager = ({ tags, setTags, calendarId }) => {
         type="color"
         value={newColor}
         onChange={(e) => setNewColor(e.target.value)}
-        style={{
-          marginRight: 8,
-          width: 40,
-          height: 30,
-          verticalAlign: "middle",
-          borderRadius: 4,
-          border: "1px solid #555",
-        }}
+        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle", borderRadius: 4, border: "1px solid #555" }}
       />
       <button
         onClick={addTag}
@@ -138,9 +133,19 @@ const TagManager = ({ tags, setTags, calendarId }) => {
   );
 };
 
+// Returns persistent per-tab calendarId stored in sessionStorage
+const getOrCreateCalendarId = () => {
+  const key = "calendarId";
+  let id = sessionStorage.getItem(key);
+  if (!id) {
+    id = uuidv4();
+    sessionStorage.setItem(key, id);
+  }
+  return id;
+};
+
 const App = () => {
-  // Unique calendarId per tab/session
-  const [calendarId] = useState(() => uuidv4());
+  const [calendarId] = useState(getOrCreateCalendarId);
 
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
@@ -165,7 +170,7 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
-    calendarId: calendarId,
+    calendarId: calendarId, // persist calendarId in event
   });
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
@@ -220,7 +225,7 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Firestore real-time subscriptions filtered by calendarId
+  // Firestore real-time subscriptions for events (filtered by calendarId)
   useEffect(() => {
     const eventsQuery = query(
       collection(db, "events"),
@@ -232,10 +237,7 @@ const App = () => {
       setEvents(eventsData);
     });
 
-    const tagsQuery = query(
-      collection(db, "tags"),
-      where("calendarId", "==", calendarId)
-    );
+    const tagsQuery = query(collection(db, "tags"));
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
@@ -302,12 +304,11 @@ const App = () => {
   };
 
   const saveEventToFirestore = async (event) => {
-    const eventData = { ...event, calendarId };
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
-      await setDoc(eventRef, eventData, { merge: true });
+      await setDoc(eventRef, event, { merge: true });
     } else {
-      const docRef = await addDoc(collection(db, "events"), eventData);
+      const docRef = await addDoc(collection(db, "events"), event);
       event.id = docRef.id;
     }
   };
@@ -327,6 +328,7 @@ const App = () => {
       id,
       originDate,
       tagName,
+      calendarId,
     } = newEvent;
 
     if (!title) {
@@ -353,9 +355,11 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
-        // Update this and future events in series from this date forward
         updatedEvents = updatedEvents.map((e) => {
-          if (e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)) {
+          if (
+            e.originDate === originDate &&
+            new Date(e.date) >= new Date(newEvent.date)
+          ) {
             return {
               ...newEvent,
               id: e.id,
@@ -367,7 +371,6 @@ const App = () => {
           return e;
         });
       } else {
-        // Single event update only
         updatedEvents = updatedEvents.map((e) =>
           e.id === id
             ? {
@@ -534,7 +537,7 @@ const App = () => {
           marginBottom: 20,
         }}
       >
-        Care Calendar (Session ID: {calendarId.slice(0, 8)})
+        Care Calendar
       </h2>
 
       <div style={{ background: "#2d2d2d", padding: 12, borderRadius: 6, marginBottom: 10 }}>
@@ -549,7 +552,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} calendarId={calendarId} />
+        <TagManager tags={tags} setTags={setTags} />
       </div>
 
       {authDebug.length > 0 && (
@@ -900,6 +903,7 @@ const App = () => {
               </div>
             );
           }}
+
           eventDidMount={(info) => {
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
@@ -930,8 +934,12 @@ const App = () => {
                     ">🏷️ ${tagName}</span><br/>`
                   : ""
               }
-              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
-              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
+              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${
+                notes || "No notes"
+              }</div>
+              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${
+                createdBy || "Unknown"
+              }</div>
             `;
 
             document.body.appendChild(tooltip);
