@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
+import timeGridPlugin from "@timegridPlugin";
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "./index.css";
@@ -14,7 +14,7 @@ const App = () => {
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
-  const [editMode, setEditMode] = useState("single"); // "single" or "series"
+  const [editMode, setEditMode] = useState("single");
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
 
@@ -118,7 +118,6 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  // Helper to check if a date string is in the past
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
     const today = new Date();
@@ -126,7 +125,6 @@ const App = () => {
     return eventDate < today;
   };
 
-  // Strict handleEventClick that blocks modal for past events
   const handleEventClick = (clickInfo) => {
     const event = events.find((e) => e.id === clickInfo.event.id);
     if (!event) return;
@@ -134,7 +132,7 @@ const App = () => {
     if (isPastDate(event.date)) {
       alert("⚠️ This event is in the past and cannot be edited.");
       debug(`Blocked edit of past event dated ${event.date}`);
-      return; // Prevent modal open
+      return;
     }
 
     setNewEvent(event);
@@ -585,7 +583,6 @@ const App = () => {
           initialView="dayGridMonth"
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          eventClassNames={(arg) => (isPastDate(arg.event.startStr) ? ["past-event"] : [])}
           events={events.map((evt) => ({
             id: evt.id,
             title: evt.title,
@@ -637,19 +634,28 @@ const App = () => {
             info.el.addEventListener("click", () => {
               tooltip.style.display = "none";
             });
+
+            // Disable pointer events and fade past events:
+            const eventDate = new Date(info.event.start);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (eventDate < today) {
+              info.el.style.opacity = "0.4";
+              info.el.style.pointerEvents = "none";
+              info.el.style.userSelect = "none";
+              info.el.style.cursor = "not-allowed";
+            } else {
+              info.el.style.opacity = "";
+              info.el.style.pointerEvents = "";
+              info.el.style.userSelect = "";
+              info.el.style.cursor = "";
+            }
           }}
         />
       </div>
     </div>
   );
 };
-
-// Helper function outside component
-function isPastDate(dateStr) {
-  const eventDate = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return eventDate < today;
-}
 
 export default App;
