@@ -13,7 +13,6 @@ function hexToRgb(hex) {
   hex = hex.replace(/^#/, "");
   let bigint = parseInt(hex, 16);
   let r, g, b;
-
   if (hex.length === 6) {
     r = (bigint >> 16) & 255;
     g = (bigint >> 8) & 255;
@@ -749,50 +748,54 @@ const App = () => {
               },
             };
           })}
-         eventContent={(arg) => {
-  const tagColor = arg.event.extendedProps.tagColor || "#f97316";
+          eventContent={(arg) => {
+            const tagName = arg.event.extendedProps.tagName || "Default";
+            const tagColor = arg.event.extendedProps.tagColor || "#f97316";
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        whiteSpace: "nowrap",
-      }}
-      title={arg.event.title}
-    >
-      <div
-        style={{
-          flexShrink: 1,
-          minWidth: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          fontWeight: "bold",
-          color: "#fff",
-          flexGrow: 1,
-        }}
-      >
-        {arg.event.title}
-      </div>
+            const rgb = hexToRgb(tagColor);
 
-      {/* Colored pill only, no text */}
-      <span
-        style={{
-          width: 14,
-          height: 14,
-          borderRadius: "50%",
-          background: tagColor,
-          boxShadow: "0 0 6px rgba(0,0,0,0.4)",
-          flexShrink: 0,
-        }}
-        title={arg.event.extendedProps.tagName || ""}
-      />
-    </div>
-  );
-}}
+            return (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  whiteSpace: "nowrap",
+                }}
+                title={arg.event.title}
+              >
+                {/* Show only the event title */}
+                <div
+                  style={{
+                    flexShrink: 1,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontWeight: "bold",
+                    color: "#fff",
+                    flexGrow: 1,
+                  }}
+                >
+                  {arg.event.title}
+                </div>
 
+                {/* Colored gradient pill for the tag */}
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 22,
+                    height: 22,
+                    borderRadius: 20,
+                    background: `linear-gradient(to right, rgba(${rgb}, 0) 0%, ${tagColor} 100%)`,
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                    userSelect: "none",
+                  }}
+                  title={tagName}
+                />
+              </div>
+            );
+          }}
           eventDidMount={(info) => {
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
