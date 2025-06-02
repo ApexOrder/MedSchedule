@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegridPlugin"; // <-- Fix here: should be "timeGridPlugin"
+import timeGridPlugin from '@fullcalendar/timegrid'; // <-- Fix here: should be "timeGridPlugin"
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "./App.css";
@@ -713,25 +713,14 @@ const App = () => {
             </div>
 
             {selectedEventId !== null && (
-              <button
-                onClick={requestDeleteEvent}
-                style={{
-                  background: "#b91c1c",
-                  padding: 10,
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
-                  marginTop: 12,
-                  width: "100%",
-                  cursor: "pointer",
-                  transition: "filter 0.3s",
-                }}
-                onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-                onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
-              >
-                Delete Event
-              </button>
-            )}
+  <button
+    className="delete-event"
+    onClick={requestDeleteEvent}
+  >
+    Delete Event
+  </button>
+)}
+
           </div>
         )}
 
