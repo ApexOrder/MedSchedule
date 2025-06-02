@@ -152,22 +152,34 @@ button:focus {
 
 /* Tooltip improved style */
 .tooltip-custom {
-  background: rgba(20, 20, 20, 0.95);
-  color: #eee;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-  white-space: pre-line;
-  max-width: 260px;
-  z-index: 11000;
-  user-select: none;
-  opacity: 0;
   position: absolute;
+  background: #2c2c2c;
+  color: #f9f9f9;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 280px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  white-space: pre-line;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 11000;
 }
+
+/* little arrow pointing down */
+.tooltip-custom::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 20px;
+  border-width: 8px 8px 0 8px;
+  border-style: solid;
+  border-color: #2c2c2c transparent transparent transparent;
+}
+
 
 input,
 textarea,
