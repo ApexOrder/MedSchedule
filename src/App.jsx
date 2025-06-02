@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { v4 as uuidv4 } from "uuid";  // UUID for unique IDs
+import { v4 as uuidv4 } from "uuid"; // UUID for unique IDs
 import "./index.css";
 import "./App.css";
 
@@ -27,16 +27,18 @@ const App = () => {
     color: "#f97316",
     createdBy: "",
     createdAt: "",
-    originDate: ""
+    originDate: "",
   });
 
+  // Debug helper: append messages to the debug panel
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
 
-    app.initialize()
+    app
+      .initialize()
       .then(() => {
         debug("🟢 Teams SDK initialized.");
         return app.getContext();
@@ -48,7 +50,7 @@ const App = () => {
             debug("✅ Auth token acquired.");
 
             try {
-              const payload = JSON.parse(atob(token.split('.')[1]));
+              const payload = JSON.parse(atob(token.split(".")[1]));
               debug("🧾 Token audience: " + payload.aud);
             } catch (e) {
               debug("❌ Failed to decode token: " + e.message);
@@ -56,14 +58,14 @@ const App = () => {
 
             fetch("/api/getUser", {
               headers: {
-                Authorization: `Bearer ${token}`
-              }
+                Authorization: `Bearer ${token}`,
+              },
             })
               .then((res) => res.json())
               .then((data) => {
                 setUser({
                   displayName: data.displayName,
-                  email: data.email
+                  email: data.email,
                 });
                 debug("✅ Custom API user fetched: " + data.displayName);
               })
@@ -73,7 +75,7 @@ const App = () => {
           },
           failureCallback: (err) => {
             debug("❌ getAuthToken error: " + JSON.stringify(err));
-          }
+          },
         });
       })
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
@@ -93,7 +95,7 @@ const App = () => {
       color: "#f97316",
       createdBy: user?.displayName || "Unknown",
       createdAt,
-      originDate: info.dateStr
+      originDate: info.dateStr,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -113,14 +115,17 @@ const App = () => {
 
   const handleSaveEvent = () => {
     const { title, date, isRecurring, interval, endDate, id, originDate } = newEvent;
-    if (!title || !date) return;
+    if (!title || !date) {
+      debug("❌ Title and date are required.");
+      return;
+    }
 
     let updatedEvents = [...events];
 
     if (selectedEventId !== null) {
       if (editMode === "series" && originDate) {
         // Remove all events in this series to avoid duplicates
-        updatedEvents = updatedEvents.filter(e => e.originDate !== originDate);
+        updatedEvents = updatedEvents.filter((e) => e.originDate !== originDate);
 
         // Recreate series with updated data
         let start = new Date(date);
@@ -140,7 +145,7 @@ const App = () => {
         }
       } else {
         // Update single event only
-        updatedEvents = updatedEvents.map(e =>
+        updatedEvents = updatedEvents.map((e) =>
           e.id === id
             ? {
                 ...newEvent,
@@ -180,6 +185,7 @@ const App = () => {
     }
 
     setEvents(updatedEvents);
+    debug("✅ Event saved. Total events: " + updatedEvents.length);
     setShowModal(false);
     setNewEvent({
       id: null,
@@ -192,44 +198,65 @@ const App = () => {
       color: "#f97316",
       createdBy: "",
       createdAt: "",
-      originDate: ""
+      originDate: "",
     });
     setSelectedEventId(null);
     setEditMode("single");
   };
 
   const handleDeleteEvent = () => {
+    debug(`handleDeleteEvent called, selectedEventId: ${selectedEventId}`);
     if (selectedEventId === null) {
       debug("❌ No event selected for deletion.");
       return;
     }
-    if (!window.confirm("Are you sure you want to delete this event?")) return;
+    if (!window.confirm("Are you sure you want to delete this event?")) {
+      debug("❌ Deletion cancelled by user.");
+      return;
+    }
 
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
-    const updatedEvents = events.filter(e => e.id !== selectedEventId);
+
+    const updatedEvents = events.filter((e) => e.id !== selectedEventId);
+    debug("Events after deleting event: " + updatedEvents.length);
     setEvents(updatedEvents);
     setShowModal(false);
     setSelectedEventId(null);
   };
 
   const handleDeleteSeries = () => {
+    debug(`handleDeleteSeries called, selectedEventId: ${selectedEventId}`);
     if (selectedEventId === null) {
       debug("❌ No event selected for series deletion.");
       return;
     }
-    if (!window.confirm("Are you sure you want to delete the entire series?")) return;
+    if (!window.confirm("Are you sure you want to delete the entire series?")) {
+      debug("❌ Series deletion cancelled by user.");
+      return;
+    }
 
-    const eventToDelete = events.find(e => e.id === selectedEventId);
+    const eventToDelete = events.find((e) => e.id === selectedEventId);
     if (!eventToDelete) {
       debug("❌ Event to delete series not found.");
       return;
     }
+
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
-    const updatedEvents = events.filter(e => e.originDate !== eventToDelete.originDate);
+
+    const updatedEvents = events.filter((e) => e.originDate !== eventToDelete.originDate);
+    debug("Events after deleting series: " + updatedEvents.length);
     setEvents(updatedEvents);
     setShowModal(false);
     setSelectedEventId(null);
   };
+
+  // Optional: debug selectedEventId and events length whenever they change
+  useEffect(() => {
+    if (selectedEventId !== null) {
+      debug(`Selected event ID: ${selectedEventId}`);
+      debug(`Current total events: ${events.length}`);
+    }
+  }, [selectedEventId, events]);
 
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
@@ -264,6 +291,8 @@ const App = () => {
             fontSize: 12,
             fontFamily: "monospace",
             marginBottom: 20,
+            maxHeight: 200,
+            overflowY: "auto",
           }}
         >
           <strong>🔧 Auth Debug Log:</strong>
@@ -371,9 +400,7 @@ const App = () => {
                   style={{ width: "100%", padding: 8 }}
                 />
 
-                <label
-                  style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}
-                >
+                <label style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}>
                   End date:
                 </label>
                 <input
@@ -425,11 +452,7 @@ const App = () => {
                 }}
               >
                 <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to delete this event?")) {
-                      handleDeleteEvent();
-                    }
-                  }}
+                  onClick={handleDeleteEvent}
                   style={{
                     background: "#ef4444",
                     padding: 10,
@@ -443,11 +466,7 @@ const App = () => {
                 </button>
 
                 <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to delete the entire series?")) {
-                      handleDeleteSeries();
-                    }
-                  }}
+                  onClick={handleDeleteSeries}
                   style={{
                     background: "#b91c1c",
                     padding: 10,
@@ -516,7 +535,6 @@ const App = () => {
               tooltip.style.display = "none";
             });
 
-            // Optional: Hide tooltip on click just to be safe
             info.el.addEventListener("click", () => {
               tooltip.style.display = "none";
             });
