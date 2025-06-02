@@ -15,6 +15,7 @@ const App = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [editMode, setEditMode] = useState("single"); // "single" or "series"
+  const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm, onCancel }
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -30,7 +31,6 @@ const App = () => {
     originDate: "",
   });
 
-  // Debug helper: append messages to the debug panel
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
   useEffect(() => {
@@ -124,10 +124,8 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "series" && originDate) {
-        // Remove all events in this series to avoid duplicates
         updatedEvents = updatedEvents.filter((e) => e.originDate !== originDate);
 
-        // Recreate series with updated data
         let start = new Date(date);
         const end = new Date(endDate);
         const createdAt = new Date().toISOString();
@@ -144,7 +142,6 @@ const App = () => {
           start.setDate(start.getDate() + parseInt(interval));
         }
       } else {
-        // Update single event only
         updatedEvents = updatedEvents.map((e) =>
           e.id === id
             ? {
@@ -158,7 +155,6 @@ const App = () => {
         );
       }
     } else {
-      // New event creation
       if (isRecurring && endDate) {
         let start = new Date(date);
         const end = new Date(endDate);
@@ -204,19 +200,28 @@ const App = () => {
     setEditMode("single");
   };
 
-  const handleDeleteEvent = () => {
-    debug(`handleDeleteEvent called, selectedEventId: ${selectedEventId}`);
+  // New: open confirm dialog for deleting single event
+  const requestDeleteEvent = () => {
     if (selectedEventId === null) {
       debug("❌ No event selected for deletion.");
       return;
     }
-    if (!window.confirm("Are you sure you want to delete this event?")) {
-      debug("❌ Deletion cancelled by user.");
-      return;
-    }
+    setConfirmDialog({
+      message: "Are you sure you want to delete this event?",
+      onConfirm: () => {
+        handleDeleteEvent();
+        setConfirmDialog(null);
+      },
+      onCancel: () => {
+        debug("❌ Deletion cancelled by user.");
+        setConfirmDialog(null);
+      },
+    });
+  };
 
+  // Actual deletion of single event (no confirm here)
+  const handleDeleteEvent = () => {
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
-
     const updatedEvents = events.filter((e) => e.id !== selectedEventId);
     debug("Events after deleting event: " + updatedEvents.length);
     setEvents(updatedEvents);
@@ -224,25 +229,33 @@ const App = () => {
     setSelectedEventId(null);
   };
 
-  const handleDeleteSeries = () => {
-    debug(`handleDeleteSeries called, selectedEventId: ${selectedEventId}`);
+  // New: open confirm dialog for deleting series
+  const requestDeleteSeries = () => {
     if (selectedEventId === null) {
       debug("❌ No event selected for series deletion.");
       return;
     }
-    if (!window.confirm("Are you sure you want to delete the entire series?")) {
-      debug("❌ Series deletion cancelled by user.");
-      return;
-    }
+    setConfirmDialog({
+      message: "Are you sure you want to delete the entire series?",
+      onConfirm: () => {
+        handleDeleteSeries();
+        setConfirmDialog(null);
+      },
+      onCancel: () => {
+        debug("❌ Series deletion cancelled by user.");
+        setConfirmDialog(null);
+      },
+    });
+  };
 
+  // Actual deletion of series (no confirm here)
+  const handleDeleteSeries = () => {
     const eventToDelete = events.find((e) => e.id === selectedEventId);
     if (!eventToDelete) {
       debug("❌ Event to delete series not found.");
       return;
     }
-
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
-
     const updatedEvents = events.filter((e) => e.originDate !== eventToDelete.originDate);
     debug("Events after deleting series: " + updatedEvents.length);
     setEvents(updatedEvents);
@@ -297,6 +310,54 @@ const App = () => {
         >
           <strong>🔧 Auth Debug Log:</strong>
           <pre style={{ whiteSpace: "pre-wrap", marginTop: 5 }}>{authDebug.join("\n")}</pre>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "#2d2d2d",
+            padding: 20,
+            borderRadius: 8,
+            zIndex: 10000,
+            width: 360,
+            boxShadow: "0 0 10px rgba(0,0,0,0.7)",
+          }}
+        >
+          <p style={{ color: "#fff", marginBottom: 20 }}>{confirmDialog.message}</p>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <button
+              onClick={confirmDialog.onConfirm}
+              style={{
+                flex: 1,
+                background: "#10b981",
+                color: "#fff",
+                border: "none",
+                padding: 10,
+                borderRadius: 4,
+              }}
+            >
+              Yes
+            </button>
+            <button
+              onClick={confirmDialog.onCancel}
+              style={{
+                flex: 1,
+                background: "#ef4444",
+                color: "#fff",
+                border: "none",
+                padding: 10,
+                borderRadius: 4,
+              }}
+            >
+              No
+            </button>
+          </div>
         </div>
       )}
 
@@ -452,7 +513,7 @@ const App = () => {
                 }}
               >
                 <button
-                  onClick={handleDeleteEvent}
+                  onClick={requestDeleteEvent}
                   style={{
                     background: "#ef4444",
                     padding: 10,
@@ -466,7 +527,7 @@ const App = () => {
                 </button>
 
                 <button
-                  onClick={handleDeleteSeries}
+                  onClick={requestDeleteSeries}
                   style={{
                     background: "#b91c1c",
                     padding: 10,
