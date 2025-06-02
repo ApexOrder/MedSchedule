@@ -96,7 +96,6 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Helper: check if a date string is in the past (before today)
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
     const today = new Date();
@@ -104,7 +103,6 @@ const App = () => {
     return eventDate < today;
   };
 
-  // Block modal on past dates for empty calendar cells
   const handleDateClick = (info) => {
     if (isPastDate(info.dateStr)) {
       alert("⚠️ Cannot create events on past dates.");
@@ -133,7 +131,6 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  // Block modal on past event clicks and fade/disable past events in calendar
   const handleEventClick = (clickInfo) => {
     const event = events.find((e) => e.id === clickInfo.event.id);
     if (!event) return;
@@ -592,6 +589,13 @@ const App = () => {
           initialView="dayGridMonth"
           dateClick={handleDateClick}
           eventClick={handleEventClick}
+          dayCellClassNames={(arg) => {
+            const date = arg.date;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (date < today) return ["past-date-cell"];
+            return [];
+          }}
           events={events.map((evt) => ({
             id: evt.id,
             title: evt.title,
@@ -644,15 +648,6 @@ const App = () => {
               tooltip.style.display = "none";
             });
 
-            dayCellClassNames={(arg) => {
-  const date = arg.date;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (date < today) return ["past-date-cell"];
-  return [];
-}}
-
-            // Disable pointer events and fade past events:
             const eventDate = new Date(info.event.start);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
