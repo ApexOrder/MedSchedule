@@ -17,7 +17,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  setDoc
+  setDoc,
 } from "firebase/firestore";
 import { db } from "./firebase.js"; // Your firebase config file
 
@@ -294,14 +294,14 @@ const App = () => {
 
   // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
-  if (event.id) {
-    const eventRef = doc(db, "events", event.id);
-    await setDoc(eventRef, event, { merge: true });  // <-- Changed from updateDoc to setDoc with merge
-  } else {
-    const docRef = await addDoc(collection(db, "events"), event);
-    event.id = docRef.id;
-  }
-};
+    if (event.id) {
+      const eventRef = doc(db, "events", event.id);
+      await setDoc(eventRef, event, { merge: true }); // <-- Changed from updateDoc to setDoc with merge
+    } else {
+      const docRef = await addDoc(collection(db, "events"), event);
+      event.id = docRef.id;
+    }
+  };
 
   const handleSaveEvent = async () => {
     if (isPastEvent) {
@@ -345,7 +345,7 @@ const App = () => {
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
         // Update this and future events in series from this date forward
-        updatedEvents = updatedEvents.map(e => {
+        updatedEvents = updatedEvents.map((e) => {
           if (
             e.originDate === originDate &&
             new Date(e.date) >= new Date(newEvent.date)
@@ -362,7 +362,7 @@ const App = () => {
         });
       } else {
         // Single event update only
-        updatedEvents = updatedEvents.map(e =>
+        updatedEvents = updatedEvents.map((e) =>
           e.id === id
             ? {
                 ...newEvent,
@@ -853,12 +853,12 @@ const App = () => {
               id: evt.id,
               title: evt.title,
               start: evt.date,
-              color: tag ? tag.color : evt.color,
+              color: tag ? tag.color : evt.color || "#f97316",
               extendedProps: {
                 notes: evt.notes,
                 createdBy: evt.createdBy,
                 tagName: tag ? tag.name : null,
-                tagColor: tag ? tag.color : null,
+                tagColor: tag ? tag.color : "#f97316",
               },
             };
           })}
@@ -923,8 +923,12 @@ const App = () => {
                     ">🏷️ ${tagName}</span><br/>`
                   : ""
               }
-              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
-              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
+              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${
+                notes || "No notes"
+              }</div>
+              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${
+                createdBy || "Unknown"
+              }</div>
             `;
 
             document.body.appendChild(tooltip);
