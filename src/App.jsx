@@ -699,57 +699,50 @@ const App = () => {
           })}
           eventDidMount={(info) => {
             if (info.el._tooltip) {
-              document.body.removeChild(info.el._tooltip);
-              info.el._tooltip = null;
-            }
+  document.body.removeChild(info.el._tooltip);
+  info.el._tooltip = null;
+}
 
-            const { notes, createdBy, tagName } = info.event.extendedProps;
-            const title = info.event.title;
+const { notes, createdBy, tagName } = info.event.extendedProps;
+const title = info.event.title;
 
-            const tooltip = document.createElement("div");
-            tooltip.innerHTML = `
-              <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
-                📝 <strong>${title}</strong><br/>
-                ${tagName ? `🏷️ <em>${tagName}</em><br/>` : ""}
-                💬 ${notes || "No notes"}<br/>
-                👤 ${createdBy || "Unknown"}
-              </div>
-            `;
-            tooltip.style.position = "absolute";
-            tooltip.style.display = "none";
-            tooltip.style.zIndex = 1000;
-            tooltip.style.transition = "opacity 0.3s ease";
-            tooltip.style.opacity = "0";
-            document.body.appendChild(tooltip);
-            info.el._tooltip = tooltip;
+const tooltip = document.createElement("div");
+tooltip.className = "tooltip-custom";
+tooltip.innerHTML = `
+  <strong>${title}</strong><br/>
+  ${tagName ? `<em style="color:#f97316;">🏷️ ${tagName}</em><br/>` : ""}
+  📝 ${notes || "No notes"}<br/>
+  👤 ${createdBy || "Unknown"}
+`;
+document.body.appendChild(tooltip);
+info.el._tooltip = tooltip;
 
-            info.el.addEventListener("mouseenter", (e) => {
-              tooltip.style.display = "block";
-              requestAnimationFrame(() => {
-                tooltip.style.opacity = "1";
-              });
-              tooltip.style.left = e.pageX + 10 + "px";
-              tooltip.style.top = e.pageY + 10 + "px";
-            });
+info.el.addEventListener("mouseenter", (e) => {
+  tooltip.style.opacity = "1";
+  tooltip.style.display = "block";
+  tooltip.style.left = e.pageX + 12 + "px";
+  tooltip.style.top = e.pageY + 12 + "px";
+});
 
-            info.el.addEventListener("mousemove", (e) => {
-              tooltip.style.left = e.pageX + 10 + "px";
-              tooltip.style.top = e.pageY + 10 + "px";
-            });
+info.el.addEventListener("mousemove", (e) => {
+  tooltip.style.left = e.pageX + 12 + "px";
+  tooltip.style.top = e.pageY + 12 + "px";
+});
 
-            info.el.addEventListener("mouseleave", () => {
-              tooltip.style.opacity = "0";
-              setTimeout(() => {
-                tooltip.style.display = "none";
-              }, 300);
-            });
+info.el.addEventListener("mouseleave", () => {
+  tooltip.style.opacity = "0";
+  setTimeout(() => {
+    tooltip.style.display = "none";
+  }, 250);
+});
 
-            info.el.addEventListener("click", () => {
-              tooltip.style.opacity = "0";
-              setTimeout(() => {
-                tooltip.style.display = "none";
-              }, 300);
-            });
+info.el.addEventListener("click", () => {
+  tooltip.style.opacity = "0";
+  setTimeout(() => {
+    tooltip.style.display = "none";
+  }, 250);
+});
+
 
             const eventDate = new Date(info.event.start);
             const today = new Date();
