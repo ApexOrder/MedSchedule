@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { v4 as uuidv4 } from "uuid"; // UUID for unique IDs
+import { v4 as uuidv4 } from "uuid";
 import "./index.css";
 import "./App.css";
 
@@ -114,10 +114,34 @@ const App = () => {
   };
 
   const handleSaveEvent = () => {
-    const { title, date, isRecurring, interval, endDate, id, originDate } = newEvent;
-    if (!title || !date) {
-      debug("❌ Title and date are required.");
+    const {
+      title,
+      date,
+      isRecurring,
+      interval,
+      endDate,
+      id,
+      originDate,
+    } = newEvent;
+
+    if (!title) {
+      debug("❌ Title is required.");
       return;
+    }
+
+    if (isRecurring) {
+      if (!endDate) {
+        debug("❌ End date is required for recurring events.");
+        return;
+      }
+      if (!interval || interval < 1) {
+        debug("❌ Interval must be at least 1 day for recurring events.");
+        return;
+      }
+      if (new Date(endDate) < new Date(date)) {
+        debug("❌ End date must be on or after start date.");
+        return;
+      }
     }
 
     let updatedEvents = [...events];
@@ -126,7 +150,7 @@ const App = () => {
       if (editMode === "series" && originDate) {
         updatedEvents = updatedEvents.filter((e) => e.originDate !== originDate);
 
-        let start = new Date(date);
+        let start = new Date(originDate); // Use original series start date
         const end = new Date(endDate);
         const createdAt = new Date().toISOString();
 
@@ -135,7 +159,10 @@ const App = () => {
             ...newEvent,
             id: uuidv4(),
             date: start.toISOString().split("T")[0],
-            originDate: date,
+            originDate: originDate,
+            isRecurring: true,
+            interval: parseInt(interval),
+            endDate,
             createdBy: newEvent.createdBy,
             createdAt,
           });
@@ -146,7 +173,7 @@ const App = () => {
           e.id === id
             ? {
                 ...newEvent,
-                originDate: isRecurring ? newEvent.originDate : "",
+                originDate: isRecurring ? newEvent.originDate || date : "",
                 isRecurring,
                 interval: isRecurring ? interval : 0,
                 endDate: isRecurring ? endDate : "",
@@ -159,12 +186,16 @@ const App = () => {
         let start = new Date(date);
         const end = new Date(endDate);
         const createdAt = new Date().toISOString();
+
         while (start <= end) {
           updatedEvents.push({
             ...newEvent,
             id: uuidv4(),
             date: start.toISOString().split("T")[0],
             originDate: date,
+            isRecurring: true,
+            interval: parseInt(interval),
+            endDate,
             createdBy: user?.displayName || "Unknown",
             createdAt,
           });
@@ -176,6 +207,7 @@ const App = () => {
           id: uuidv4(),
           createdBy: user?.displayName || "Unknown",
           createdAt: new Date().toISOString(),
+          originDate: "",
         });
       }
     }
@@ -200,7 +232,7 @@ const App = () => {
     setEditMode("single");
   };
 
-  // New: open confirm dialog for deleting single event
+  // Confirmation dialogs as before
   const requestDeleteEvent = () => {
     if (selectedEventId === null) {
       debug("❌ No event selected for deletion.");
@@ -219,7 +251,6 @@ const App = () => {
     });
   };
 
-  // Actual deletion of single event (no confirm here)
   const handleDeleteEvent = () => {
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
     const updatedEvents = events.filter((e) => e.id !== selectedEventId);
@@ -229,7 +260,6 @@ const App = () => {
     setSelectedEventId(null);
   };
 
-  // New: open confirm dialog for deleting series
   const requestDeleteSeries = () => {
     if (selectedEventId === null) {
       debug("❌ No event selected for series deletion.");
@@ -248,7 +278,6 @@ const App = () => {
     });
   };
 
-  // Actual deletion of series (no confirm here)
   const handleDeleteSeries = () => {
     const eventToDelete = events.find((e) => e.id === selectedEventId);
     if (!eventToDelete) {
@@ -263,7 +292,7 @@ const App = () => {
     setSelectedEventId(null);
   };
 
-  // Optional: debug selectedEventId and events length whenever they change
+  // Optional debug effect
   useEffect(() => {
     if (selectedEventId !== null) {
       debug(`Selected event ID: ${selectedEventId}`);
@@ -415,6 +444,24 @@ const App = () => {
                   </label>
                 </div>
               )}
+
+            {/* Date input */}
+            <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
+              {editMode === "series" ? "Series Start Date:" : "Date:"}
+            </label>
+            <input
+              type="date"
+              value={editMode === "series" ? newEvent.originDate || newEvent.date : newEvent.date}
+              onChange={(e) => {
+                if (editMode === "series") {
+                  setNewEvent({ ...newEvent, originDate: e.target.value });
+                } else {
+                  setNewEvent({ ...newEvent, date: e.target.value });
+                }
+              }}
+              style={{ width: "100%", marginBottom: 10, padding: 8 }}
+              disabled={editMode === "single" && newEvent.originDate ? true : false}
+            />
 
             <input
               type="text"
