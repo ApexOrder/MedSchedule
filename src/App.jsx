@@ -6,20 +6,19 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 
-import "./App.css";
-
 import {
   collection,
   query,
   orderBy,
+  where,
   onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
-  setDoc
+  setDoc,
 } from "firebase/firestore";
-import { db } from "./firebase.js"; // Your firebase config file
+import { db } from "./firebase.js";
 
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
@@ -43,12 +42,13 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-const TagManager = ({ tags, setTags }) => {
+const TagManager = ({ tags, setTags, calendarId }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
   const addTagToFirestore = async (tag) => {
-    const docRef = await addDoc(collection(db, "tags"), tag);
+    const tagData = { ...tag, calendarId };
+    const docRef = await addDoc(collection(db, "tags"), tagData);
     return docRef.id;
   };
 
@@ -73,7 +73,14 @@ const TagManager = ({ tags, setTags }) => {
         type="color"
         value={newColor}
         onChange={(e) => setNewColor(e.target.value)}
-        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle", borderRadius: 4, border: "1px solid #555" }}
+        style={{
+          marginRight: 8,
+          width: 40,
+          height: 30,
+          verticalAlign: "middle",
+          borderRadius: 4,
+          border: "1px solid #555",
+        }}
       />
       <button
         onClick={addTag}
@@ -132,6 +139,9 @@ const TagManager = ({ tags, setTags }) => {
 };
 
 const App = () => {
+  // Unique calendarId per tab/session
+  const [calendarId] = useState(() => uuidv4());
+
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
   const [events, setEvents] = useState([]);
@@ -155,6 +165,7 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
+    calendarId: calendarId,
   });
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
@@ -209,15 +220,22 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Firestore real-time subscriptions
+  // Firestore real-time subscriptions filtered by calendarId
   useEffect(() => {
-    const eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
+    const eventsQuery = query(
+      collection(db, "events"),
+      where("calendarId", "==", calendarId),
+      orderBy("date", "asc")
+    );
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
     });
 
-    const tagsQuery = query(collection(db, "tags"));
+    const tagsQuery = query(
+      collection(db, "tags"),
+      where("calendarId", "==", calendarId)
+    );
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
@@ -227,7 +245,7 @@ const App = () => {
       unsubscribeEvents();
       unsubscribeTags();
     };
-  }, []);
+  }, [calendarId]);
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -258,6 +276,7 @@ const App = () => {
       createdAt,
       originDate: info.dateStr,
       tagName: null,
+      calendarId,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -282,13 +301,13 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
+    const eventData = { ...event, calendarId };
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
-      await setDoc(eventRef, event, { merge: true });
+      await setDoc(eventRef, eventData, { merge: true });
     } else {
-      const docRef = await addDoc(collection(db, "events"), event);
+      const docRef = await addDoc(collection(db, "events"), eventData);
       event.id = docRef.id;
     }
   };
@@ -334,11 +353,9 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
-        updatedEvents = updatedEvents.map(e => {
-          if (
-            e.originDate === originDate &&
-            new Date(e.date) >= new Date(newEvent.date)
-          ) {
+        // Update this and future events in series from this date forward
+        updatedEvents = updatedEvents.map((e) => {
+          if (e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)) {
             return {
               ...newEvent,
               id: e.id,
@@ -350,7 +367,8 @@ const App = () => {
           return e;
         });
       } else {
-        updatedEvents = updatedEvents.map(e =>
+        // Single event update only
+        updatedEvents = updatedEvents.map((e) =>
           e.id === id
             ? {
                 ...newEvent,
@@ -380,6 +398,7 @@ const App = () => {
             createdBy: user?.displayName || "Unknown",
             createdAt,
             tagName,
+            calendarId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -391,6 +410,7 @@ const App = () => {
           createdAt: new Date().toISOString(),
           originDate: "",
           tagName,
+          calendarId,
         });
       }
     }
@@ -416,6 +436,7 @@ const App = () => {
       createdAt: "",
       originDate: "",
       tagName: null,
+      calendarId,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -513,7 +534,7 @@ const App = () => {
           marginBottom: 20,
         }}
       >
-        Care Calendar
+        Care Calendar (Session ID: {calendarId.slice(0, 8)})
       </h2>
 
       <div style={{ background: "#2d2d2d", padding: 12, borderRadius: 6, marginBottom: 10 }}>
@@ -528,7 +549,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} />
+        <TagManager tags={tags} setTags={setTags} calendarId={calendarId} />
       </div>
 
       {authDebug.length > 0 && (
@@ -835,17 +856,17 @@ const App = () => {
             return [];
           }}
           events={events.map((evt) => {
-            const tag = evt.tagName ? tags.find((t) => t.name === evt.tagName) : null;
+            const tag = tags.find((t) => t.name === evt.tagName);
             return {
               id: evt.id,
               title: evt.title,
               start: evt.date,
-              color: tag ? tag.color : evt.color || "#f97316",
+              color: tag ? tag.color : evt.color,
               extendedProps: {
-                notes: evt.notes || "",
-                createdBy: evt.createdBy || "Unknown",
+                notes: evt.notes,
+                createdBy: evt.createdBy,
                 tagName: tag ? tag.name : null,
-                tagColor: tag ? tag.color : "#f97316",
+                tagColor: tag ? tag.color : null,
               },
             };
           })}
@@ -879,7 +900,6 @@ const App = () => {
               </div>
             );
           }}
-
           eventDidMount={(info) => {
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
