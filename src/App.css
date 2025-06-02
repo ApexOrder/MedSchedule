@@ -168,3 +168,32 @@ button:focus {
   opacity: 0;
   position: absolute;
 }
+
+input,
+textarea,
+select {
+  color: #111;               /* dark text for readability */
+  background-color: #eee;    /* light background */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 8px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  transition: border-color 0.3s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #999;               /* softer placeholder text */
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #f97316;     /* highlight border on focus */
+  box-shadow: 0 0 6px #f97316aa;
+  background-color: #fff;
+  color: #111;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
