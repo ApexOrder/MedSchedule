@@ -757,7 +757,7 @@ const App = () => {
         width: "100%",
         padding: "6px 12px",
         borderRadius: 30,
-        background: `linear-gradient(135deg, rgba(${rgb}, 0.8), ${tagColor})`,
+        background: `linear-gradient(90deg, rgba(${rgb}, 0) 0%, ${tagColor} 100%)`,
         boxShadow: `0 4px 8px rgba(${rgb}, 0.3), inset 0 0 10px rgba(255,255,255,0.25)`,
         color: "#fff",
         fontWeight: 600,
