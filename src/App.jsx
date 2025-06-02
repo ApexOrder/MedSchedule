@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -30,6 +30,21 @@ const App = () => {
     createdAt: "",
     originDate: "",
   });
+
+  // Memoize events key to force FullCalendar remount and refresh tooltips after edits
+  const eventsKey = useMemo(
+    () =>
+      JSON.stringify(
+        events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          date: e.date,
+          notes: e.notes,
+          createdBy: e.createdBy,
+        }))
+      ),
+    [events]
+  );
 
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
@@ -291,7 +306,6 @@ const App = () => {
     setSelectedEventId(null);
   };
 
-  // Debug effect
   useEffect(() => {
     if (selectedEventId !== null) {
       debug(`Selected event ID: ${selectedEventId}`);
@@ -444,7 +458,7 @@ const App = () => {
                 </div>
               )}
 
-            {/* NO date input anymore */}
+            {/* Removed date input */}
 
             <input
               type="text"
@@ -575,6 +589,7 @@ const App = () => {
         )}
 
         <FullCalendar
+          key={eventsKey}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           headerToolbar={{
             start: "dayGridMonth,timeGridWeek,timeGridDay",
@@ -595,15 +610,14 @@ const App = () => {
             },
           }))}
           eventDidMount={(info) => {
-            // Tooltip that always uses current event.extendedProps (should update on rerender)
-            const { notes, createdBy } = info.event.extendedProps;
-            const title = info.event.title;
-
-            // Remove any existing tooltip first
+            // Clean up any existing tooltip first to avoid duplicates
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
               info.el._tooltip = null;
             }
+
+            const { notes, createdBy } = info.event.extendedProps;
+            const title = info.event.title;
 
             const tooltip = document.createElement("div");
             tooltip.innerHTML = `
