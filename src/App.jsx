@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from '@fullcalendar/timegrid'; // <-- Fix here: should be "timeGridPlugin"
+import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "./App.css";
@@ -116,7 +116,7 @@ const App = () => {
   const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
-  const [editMode, setEditMode] = useState("single");
+  const [editMode, setEditMode] = useState("single"); // "single" or "future"
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
 
@@ -280,65 +280,36 @@ const App = () => {
     let updatedEvents = [...events];
 
     if (selectedEventId !== null) {
-      if (editMode === "series" && originDate) {
-        updatedEvents = updatedEvents.filter((e) => e.originDate !== originDate);
-
-        let start = new Date(originDate);
-        const end = new Date(endDate);
-        const createdAt = new Date().toISOString();
-
-        while (start <= end) {
-          updatedEvents.push({
-            ...newEvent,
-            id: uuidv4(),
-            date: start.toISOString().split("T")[0],
-            originDate: originDate,
-            isRecurring: true,
-            interval: parseInt(interval),
-            endDate,
-            createdBy: newEvent.createdBy,
-            createdAt,
-            tagId,
-          });
-          start.setDate(start.getDate() + parseInt(interval));
-        }
-      } else {
-        if (isRecurring && interval && endDate && new Date(endDate) >= new Date(date)) {
-          updatedEvents = updatedEvents.filter(e => e.id !== id);
-
-          let start = new Date(date);
-          const end = new Date(endDate);
-          const createdAt = new Date().toISOString();
-          const seriesOriginDate = date;
-
-          while (start <= end) {
-            updatedEvents.push({
+      if (editMode === "future" && originDate) {
+        // Update this and future events in series from this date forward
+        updatedEvents = updatedEvents.map(e => {
+          if (
+            e.originDate === originDate &&
+            new Date(e.date) >= new Date(newEvent.date)
+          ) {
+            return {
               ...newEvent,
-              id: uuidv4(),
-              date: start.toISOString().split("T")[0],
-              originDate: seriesOriginDate,
-              isRecurring: true,
-              interval: parseInt(interval),
-              endDate,
-              createdBy: newEvent.createdBy,
-              createdAt,
-              tagId,
-            });
-            start.setDate(start.getDate() + parseInt(interval));
+              id: e.id,
+              date: e.date,
+              createdBy: e.createdBy,
+              createdAt: e.createdAt,
+            };
           }
-        } else {
-          updatedEvents = updatedEvents.map((e) =>
-            e.id === id
-              ? {
-                  ...newEvent,
-                  originDate: isRecurring ? newEvent.originDate || date : "",
-                  isRecurring,
-                  interval: isRecurring ? interval : 0,
-                  endDate: isRecurring ? endDate : "",
-                }
-              : e
-          );
-        }
+          return e;
+        });
+      } else {
+        // Single event update only
+        updatedEvents = updatedEvents.map(e =>
+          e.id === id
+            ? {
+                ...newEvent,
+                originDate: isRecurring ? newEvent.originDate || date : "",
+                isRecurring,
+                interval: isRecurring ? interval : 0,
+                endDate: isRecurring ? endDate : "",
+              }
+            : e
+        );
       }
     } else {
       if (isRecurring && endDate) {
@@ -609,6 +580,31 @@ const App = () => {
               style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
             />
 
+            {selectedEventId !== null && newEvent.isRecurring && (
+              <div style={{ marginBottom: 10, color: "#fff" }}>
+                <label style={{ marginRight: 12 }}>
+                  <input
+                    type="radio"
+                    name="editMode"
+                    value="single"
+                    checked={editMode === "single"}
+                    onChange={() => setEditMode("single")}
+                  />{" "}
+                  Edit this event only
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="editMode"
+                    value="future"
+                    checked={editMode === "future"}
+                    onChange={() => setEditMode("future")}
+                  />{" "}
+                  Edit this and future events
+                </label>
+              </div>
+            )}
+
             <textarea
               placeholder="Notes"
               value={newEvent.notes}
@@ -674,7 +670,7 @@ const App = () => {
               ))}
             </select>
 
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
               <button
                 onClick={handleSaveEvent}
                 style={{
@@ -683,7 +679,7 @@ const App = () => {
                   color: "#fff",
                   border: "none",
                   borderRadius: 4,
-                  flex: 1,
+                  flex: "1 1 45%",
                   transition: "filter 0.3s",
                   cursor: "pointer",
                 }}
@@ -701,7 +697,7 @@ const App = () => {
                   color: "#fff",
                   border: "none",
                   borderRadius: 4,
-                  flex: 1,
+                  flex: "1 1 45%",
                   transition: "filter 0.3s",
                   cursor: "pointer",
                 }}
@@ -711,26 +707,52 @@ const App = () => {
                 Cancel
               </button>
             </div>
-           {selectedEventId !== null && (
-  <>
-    <button
-      className="delete-event"
-      onClick={requestDeleteEvent}
-    >
-      Delete Event
-    </button>
 
-    <button
-      className="delete-event"
-      onClick={requestDeleteSeries}
-      style={{ backgroundColor: "#7f1d1d", marginTop: 8 }}
-    >
-      Delete Series
-    </button>
-  </>
-)}
+            {selectedEventId !== null && (
+              <>
+                <button
+                  className="delete-event"
+                  onClick={requestDeleteEvent}
+                  style={{
+                    marginTop: 12,
+                    width: "100%",
+                    backgroundColor: "#b91c1c",
+                    color: "#fff",
+                    border: "none",
+                    padding: 10,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    transition: "filter 0.3s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+                  onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                >
+                  Delete Event
+                </button>
 
-
+                {newEvent.isRecurring && (
+                  <button
+                    className="delete-event"
+                    onClick={requestDeleteSeries}
+                    style={{
+                      marginTop: 8,
+                      width: "100%",
+                      backgroundColor: "#7f1d1d",
+                      color: "#fff",
+                      border: "none",
+                      padding: 10,
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      transition: "filter 0.3s",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+                    onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                  >
+                    Delete Series
+                  </button>
+                )}
+              </>
+            )}
           </div>
         )}
 
