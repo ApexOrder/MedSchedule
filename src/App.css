@@ -58,4 +58,10 @@ h2 {
   pointer-events: none !important;
   user-select: none;
 }
+.past-date-cell {
+  background-color: #2a2a2a !important;  /* dark background */
+  color: #777 !important;                /* muted text */
+  cursor: default !important;
+  user-select: none;
+}
 
