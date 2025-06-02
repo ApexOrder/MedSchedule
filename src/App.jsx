@@ -711,15 +711,25 @@ const App = () => {
                 Cancel
               </button>
             </div>
+           {selectedEventId !== null && (
+  <>
+    <button
+      className="delete-event"
+      onClick={requestDeleteEvent}
+    >
+      Delete Event
+    </button>
 
-            {selectedEventId !== null && (
-  <button
-    className="delete-event"
-    onClick={requestDeleteEvent}
-  >
-    Delete Event
-  </button>
+    <button
+      className="delete-event"
+      onClick={requestDeleteSeries}
+      style={{ backgroundColor: "#7f1d1d", marginTop: 8 }}
+    >
+      Delete Series
+    </button>
+  </>
 )}
+
 
           </div>
         )}
