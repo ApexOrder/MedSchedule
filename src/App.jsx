@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@timegridPlugin";
+import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "./index.css";
