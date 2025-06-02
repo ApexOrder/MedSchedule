@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { v4 as uuidv4 } from "uuid";  // <<<< added for unique IDs
+import { v4 as uuidv4 } from "uuid";
 import "./index.css";
 import "./App.css";
 
@@ -13,11 +13,11 @@ const App = () => {
   const [authDebug, setAuthDebug] = useState([]);
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [selectedEventIndex, setSelectedEventIndex] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(null);  // Use id, not index
   const [editMode, setEditMode] = useState("single"); // "single" or "series"
 
   const [newEvent, setNewEvent] = useState({
-    id: null,  // add id here
+    id: null,
     title: "",
     notes: "",
     date: "",
@@ -95,33 +95,34 @@ const App = () => {
       createdAt,
       originDate: info.dateStr
     });
-    setSelectedEventIndex(null);
+    setSelectedEventId(null);
     setShowModal(true);
     setEditMode("single");
   };
 
   const handleEventClick = (clickInfo) => {
-    const index = events.findIndex((e) => e.id === clickInfo.event.id);
-    debug(`Event clicked with id: ${clickInfo.event.id} found at index: ${index}`);
+    const eventId = clickInfo.event.id;
+    const index = events.findIndex((e) => e.id === eventId);
+    debug(`Event clicked with id: ${eventId} found at index: ${index}`);
     if (index !== -1) {
       setNewEvent(events[index]);
-      setSelectedEventIndex(index);
+      setSelectedEventId(eventId);
       setShowModal(true);
       setEditMode("single");
     }
   };
 
   const handleSaveEvent = () => {
-    const { title, date, isRecurring, interval, endDate, id } = newEvent;
+    const { title, date, isRecurring, interval, endDate, id, originDate } = newEvent;
     if (!title || !date) return;
 
     let updatedEvents = [...events];
 
-    if (selectedEventIndex !== null) {
-      if (editMode === "series" && newEvent.originDate) {
-        // Update all events in series - update properties only, no deletion
+    if (selectedEventId !== null) {
+      if (editMode === "series" && originDate) {
+        // Update all events in series - no deletion, update properties only
         updatedEvents = updatedEvents.map((e) => {
-          if (e.originDate === newEvent.originDate) {
+          if (e.originDate === originDate) {
             return {
               ...e,
               title,
@@ -137,8 +138,42 @@ const App = () => {
           return e;
         });
       } else {
-        // Update single event only
-        updatedEvents[selectedEventIndex] = { ...newEvent };
+        // Updating single event only
+        // Check if changing single event to recurring - create series instead of just one
+        if (isRecurring && endDate && (!originDate || originDate === date)) {
+          // Create recurring series starting at this date, keep old event updated to first occurrence
+          // Remove old event from updatedEvents (using id)
+          updatedEvents = updatedEvents.filter(e => e.id !== id);
+
+          let start = new Date(date);
+          const end = new Date(endDate);
+          const createdAt = new Date().toISOString();
+          while (start <= end) {
+            updatedEvents.push({
+              ...newEvent,
+              id: uuidv4(),
+              date: start.toISOString().split("T")[0],
+              originDate: date,
+              createdBy: newEvent.createdBy,
+              createdAt,
+            });
+            start.setDate(start.getDate() + parseInt(interval));
+          }
+        } else {
+          // Just update single event as normal (including switching from recurring to single)
+          updatedEvents = updatedEvents.map(e =>
+            e.id === id
+              ? {
+                  ...newEvent,
+                  // If switched to non-recurring, clear originDate and recurrence info
+                  originDate: isRecurring ? newEvent.originDate : "",
+                  isRecurring,
+                  interval: isRecurring ? interval : 0,
+                  endDate: isRecurring ? endDate : "",
+                }
+              : e
+          );
+        }
       }
     } else {
       // Creating new events
@@ -182,50 +217,46 @@ const App = () => {
       createdAt: "",
       originDate: ""
     });
-    setSelectedEventIndex(null);
+    setSelectedEventId(null);
     setEditMode("single");
   };
 
   const handleDeleteEvent = () => {
-    if (selectedEventIndex === null) {
+    if (selectedEventId === null) {
       debug("❌ No event selected for deletion.");
       return;
     }
     if (!window.confirm("Are you sure you want to delete this event?")) return;
 
-    debug(`🗑️ Deleting event at index ${selectedEventIndex}`);
-    const updatedEvents = events.filter((_, index) => index !== selectedEventIndex);
+    debug(`🗑️ Deleting event with id ${selectedEventId}`);
+    const updatedEvents = events.filter((e) => e.id !== selectedEventId);
     setEvents(updatedEvents);
     setShowModal(false);
-    setSelectedEventIndex(null);
+    setSelectedEventId(null);
   };
 
   const handleDeleteSeries = () => {
-    if (selectedEventIndex === null) {
+    if (selectedEventId === null) {
       debug("❌ No event selected for series deletion.");
       return;
     }
     if (!window.confirm("Are you sure you want to delete the entire series?")) return;
 
-    const eventToDelete = events[selectedEventIndex];
+    const eventToDelete = events.find((e) => e.id === selectedEventId);
+    if (!eventToDelete) {
+      debug("❌ Event to delete series not found.");
+      return;
+    }
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
     const updatedEvents = events.filter((e) => e.originDate !== eventToDelete.originDate);
     setEvents(updatedEvents);
     setShowModal(false);
-    setSelectedEventIndex(null);
+    setSelectedEventId(null);
   };
 
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
-      <h2
-        style={{
-          color: "#f97316",
-          fontSize: 24,
-          fontWeight: "bold",
-          textAlign: "center",
-          marginBottom: 20,
-        }}
-      >
+      <h2 style={{ color: "#f97316", fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 }}>
         Care Calendar
       </h2>
 
@@ -272,18 +303,18 @@ const App = () => {
             }}
           >
             <h3 style={{ color: "#fff", marginBottom: 4 }}>
-              {selectedEventIndex !== null ? "Edit Event" : "New Event"}
+              {selectedEventId !== null ? "Edit Event" : "New Event"}
             </h3>
 
             {/* Created date label */}
-            {selectedEventIndex !== null && newEvent.createdAt && (
+            {selectedEventId !== null && newEvent.createdAt && (
               <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
                 Created: {new Date(newEvent.createdAt).toLocaleString()}
               </div>
             )}
 
             {/* Edit mode choice only when editing series event */}
-            {selectedEventIndex !== null &&
+            {selectedEventId !== null &&
               newEvent.originDate &&
               events.some((e) => e.originDate === newEvent.originDate && e.id !== newEvent.id) && (
                 <div style={{ marginBottom: 10, color: "#fff" }}>
@@ -399,7 +430,7 @@ const App = () => {
               </button>
             </div>
 
-            {selectedEventIndex !== null && (
+            {selectedEventId !== null && (
               <div
                 style={{
                   marginTop: 20,
@@ -504,6 +535,14 @@ const App = () => {
             info.el.addEventListener("click", () => {
               tooltip.style.display = "none";
             });
+
+            // Clean up tooltip on event unmount (to prevent duplicates)
+            info.el._tooltip = tooltip;
+          }}
+          eventWillUnmount={(info) => {
+            if (info.el._tooltip) {
+              info.el._tooltip.remove();
+            }
           }}
         />
       </div>
