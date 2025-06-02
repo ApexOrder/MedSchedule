@@ -118,27 +118,26 @@ const App = () => {
     setIsPastEvent(false);
   };
 
+  // Strict handleEventClick that blocks modal for past events
   const handleEventClick = (clickInfo) => {
-    const index = events.findIndex((e) => e.id === clickInfo.event.id);
-    debug(`Event clicked with id: ${clickInfo.event.id} found at index: ${index}`);
-    if (index !== -1) {
-      const eventToEdit = events[index];
-      const eventDate = new Date(eventToEdit.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    const event = events.find((e) => e.id === clickInfo.event.id);
+    if (!event) return;
 
-      if (eventDate < today) {
-        debug("⚠️ Cannot edit past events.");
-        alert("⚠️ This event is in the past and cannot be edited.");
-        return; // Don't open modal for past events
-      }
+    const eventDate = new Date(event.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      setNewEvent(eventToEdit);
-      setSelectedEventId(eventToEdit.id);
-      setShowModal(true);
-      setEditMode("single");
-      setIsPastEvent(false);
+    if (eventDate < today) {
+      alert("⚠️ This event is in the past and cannot be edited.");
+      debug(`Blocked edit of past event dated ${event.date}`);
+      return; // Prevent modal open
     }
+
+    setNewEvent(event);
+    setSelectedEventId(event.id);
+    setShowModal(true);
+    setEditMode("single");
+    setIsPastEvent(false);
   };
 
   const handleSaveEvent = () => {
