@@ -748,66 +748,36 @@ const App = () => {
             };
           })}
           eventContent={(arg) => {
-            const tagName = arg.event.extendedProps.tagName || "Default";
-            const tagColor = arg.event.extendedProps.tagColor || "#f97316";
+  const tagColor = arg.event.extendedProps.tagColor || "#f97316";
+  const rgb = hexToRgb(tagColor);
 
-            const rgb = hexToRgb(tagColor);
+  return (
+    <div
+      style={{
+        width: "100%",
+        padding: "6px 12px",
+        borderRadius: 30,
+        background: `linear-gradient(135deg, rgba(${rgb}, 0.8), ${tagColor})`,
+        boxShadow: `0 4px 8px rgba(${rgb}, 0.3), inset 0 0 10px rgba(255,255,255,0.25)`,
+        color: "#fff",
+        fontWeight: 600,
+        fontSize: 14,
+        userSelect: "none",
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+        textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        textAlign: "center",
+        cursor: "pointer",
+      }}
+      title={arg.event.title}
+    >
+      {arg.event.title}
+    </div>
+  );
+}}
 
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  whiteSpace: "nowrap",
-                }}
-                title={arg.event.title}
-              >
-                {/* Show only the event title */}
-                <div
-                  style={{
-                    flexShrink: 1,
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    fontWeight: "600",
-                    color: "#fff",
-                    flexGrow: 1,
-                    fontSize: 13,
-                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                  }}
-                >
-                  {arg.event.title}
-                </div>
-
-                {/* Updated pill style */}
-                <span
-                  style={{
-                    display: "inline-block",
-                    minWidth: 70,
-                    padding: "6px 18px",
-                    borderRadius: 30,
-                    background: `linear-gradient(135deg, rgba(${rgb}, 0.8), ${tagColor})`,
-                    boxShadow: `0 4px 8px rgba(${rgb}, 0.3), inset 0 0 10px rgba(255,255,255,0.25)`,
-                    color: "#fff",
-                    fontWeight: 600,
-                    fontSize: 13,
-                    userSelect: "none",
-                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                    textShadow: "0 1px 2px rgba(0,0,0,0.6)",
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                  title={tagName}
-                >
-                  {tagName}
-                </span>
-              </div>
-            );
-          }}
           eventDidMount={(info) => {
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
