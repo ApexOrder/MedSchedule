@@ -15,7 +15,7 @@ const App = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [editMode, setEditMode] = useState("single"); // "single" or "series"
-  const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm, onCancel }
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -150,7 +150,7 @@ const App = () => {
       if (editMode === "series" && originDate) {
         updatedEvents = updatedEvents.filter((e) => e.originDate !== originDate);
 
-        let start = new Date(originDate); // Use original series start date
+        let start = new Date(originDate);
         const end = new Date(endDate);
         const createdAt = new Date().toISOString();
 
@@ -232,7 +232,6 @@ const App = () => {
     setEditMode("single");
   };
 
-  // Confirmation dialogs as before
   const requestDeleteEvent = () => {
     if (selectedEventId === null) {
       debug("❌ No event selected for deletion.");
@@ -292,7 +291,7 @@ const App = () => {
     setSelectedEventId(null);
   };
 
-  // Optional debug effect
+  // Debug effect
   useEffect(() => {
     if (selectedEventId !== null) {
       debug(`Selected event ID: ${selectedEventId}`);
@@ -342,7 +341,6 @@ const App = () => {
         </div>
       )}
 
-      {/* Confirmation Dialog */}
       {confirmDialog && (
         <div
           style={{
@@ -410,14 +408,15 @@ const App = () => {
               {selectedEventId !== null ? "Edit Event" : "New Event"}
             </h3>
 
-            {/* Created date label */}
+            {/* Show creation info */}
             {selectedEventId !== null && newEvent.createdAt && (
               <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
-                Created: {new Date(newEvent.createdAt).toLocaleString()}
+                Created: {new Date(newEvent.createdAt).toLocaleString()} <br />
+                Created by: {newEvent.createdBy || "Unknown"}
               </div>
             )}
 
-            {/* Edit mode choice only when editing series event */}
+            {/* Edit mode choice for series */}
             {selectedEventId !== null &&
               newEvent.originDate &&
               events.some((e) => e.originDate === newEvent.originDate && e.id !== newEvent.id) && (
@@ -445,23 +444,7 @@ const App = () => {
                 </div>
               )}
 
-            {/* Date input */}
-            <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
-              {editMode === "series" ? "Series Start Date:" : "Date:"}
-            </label>
-            <input
-              type="date"
-              value={editMode === "series" ? newEvent.originDate || newEvent.date : newEvent.date}
-              onChange={(e) => {
-                if (editMode === "series") {
-                  setNewEvent({ ...newEvent, originDate: e.target.value });
-                } else {
-                  setNewEvent({ ...newEvent, date: e.target.value });
-                }
-              }}
-              style={{ width: "100%", marginBottom: 10, padding: 8 }}
-              disabled={editMode === "single" && newEvent.originDate ? true : false}
-            />
+            {/* NO date input anymore */}
 
             <input
               type="text"
@@ -612,8 +595,15 @@ const App = () => {
             },
           }))}
           eventDidMount={(info) => {
+            // Tooltip that always uses current event.extendedProps (should update on rerender)
             const { notes, createdBy } = info.event.extendedProps;
             const title = info.event.title;
+
+            // Remove any existing tooltip first
+            if (info.el._tooltip) {
+              document.body.removeChild(info.el._tooltip);
+              info.el._tooltip = null;
+            }
 
             const tooltip = document.createElement("div");
             tooltip.innerHTML = `
@@ -627,6 +617,7 @@ const App = () => {
             tooltip.style.display = "none";
             tooltip.style.zIndex = 1000;
             document.body.appendChild(tooltip);
+            info.el._tooltip = tooltip;
 
             info.el.addEventListener("mouseenter", (e) => {
               tooltip.style.display = "block";
