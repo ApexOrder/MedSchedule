@@ -64,4 +64,8 @@ h2 {
   cursor: default !important;
   user-select: none;
 }
+.past-date-cell .fc-daygrid-day-number {
+  opacity: 0.4 !important;
+  color: #777 !important;
+}
 
