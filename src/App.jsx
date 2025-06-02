@@ -8,10 +8,64 @@ import { v4 as uuidv4 } from "uuid";
 import "./index.css";
 import "./App.css";
 
+const TagManager = ({ tags, setTags }) => {
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState("#3b82f6");
+
+  const addTag = () => {
+    if (!newName.trim()) return;
+    setTags([...tags, { id: uuidv4(), name: newName.trim(), color: newColor }]);
+    setNewName("");
+  };
+
+  return (
+    <div>
+      <input
+        placeholder="Tag name"
+        value={newName}
+        onChange={(e) => setNewName(e.target.value)}
+        style={{ padding: 6, marginRight: 8 }}
+      />
+      <input
+        type="color"
+        value={newColor}
+        onChange={(e) => setNewColor(e.target.value)}
+        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle" }}
+      />
+      <button onClick={addTag} style={{ padding: "6px 12px" }}>
+        Add Tag
+      </button>
+
+      <div style={{ marginTop: 10 }}>
+        {tags.map((tag) => (
+          <span
+            key={tag.id}
+            style={{
+              display: "inline-block",
+              backgroundColor: tag.color,
+              color: "#fff",
+              padding: "4px 10px",
+              borderRadius: 12,
+              marginRight: 6,
+              marginBottom: 6,
+              fontSize: 12,
+              userSelect: "none",
+            }}
+            title={tag.name}
+          >
+            {tag.name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
   const [events, setEvents] = useState([]);
+  const [tags, setTags] = useState([]); // <-- start empty, user adds tags
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [editMode, setEditMode] = useState("single"); // "single" or "series"
@@ -30,6 +84,7 @@ const App = () => {
     createdBy: "",
     createdAt: "",
     originDate: "",
+    tagId: null, // added tagId to event
   });
 
   const eventsKey = useMemo(
@@ -41,6 +96,7 @@ const App = () => {
           date: e.date,
           notes: e.notes,
           createdBy: e.createdBy,
+          tagId: e.tagId,
         }))
       ),
     [events]
@@ -124,6 +180,7 @@ const App = () => {
       createdBy: user?.displayName || "Unknown",
       createdAt,
       originDate: info.dateStr,
+      tagId: null,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -162,6 +219,7 @@ const App = () => {
       endDate,
       id,
       originDate,
+      tagId,
     } = newEvent;
 
     if (!title) {
@@ -205,6 +263,7 @@ const App = () => {
             endDate,
             createdBy: newEvent.createdBy,
             createdAt,
+            tagId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -228,6 +287,7 @@ const App = () => {
               endDate,
               createdBy: newEvent.createdBy,
               createdAt,
+              tagId,
             });
             start.setDate(start.getDate() + parseInt(interval));
           }
@@ -262,6 +322,7 @@ const App = () => {
             endDate,
             createdBy: user?.displayName || "Unknown",
             createdAt,
+            tagId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -272,6 +333,7 @@ const App = () => {
           createdBy: user?.displayName || "Unknown",
           createdAt: new Date().toISOString(),
           originDate: "",
+          tagId,
         });
       }
     }
@@ -291,6 +353,7 @@ const App = () => {
       createdBy: "",
       createdAt: "",
       originDate: "",
+      tagId: null,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -395,6 +458,11 @@ const App = () => {
         ) : (
           <>🔄 Authenticating…</>
         )}
+      </div>
+
+      <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
+        <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
+        <TagManager tags={tags} setTags={setTags} />
       </div>
 
       {authDebug.length > 0 && (
@@ -546,6 +614,23 @@ const App = () => {
               </div>
             )}
 
+            {/* Tag dropdown */}
+            <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
+              Event Tag:
+            </label>
+            <select
+              value={newEvent.tagId || ""}
+              onChange={(e) => setNewEvent({ ...newEvent, tagId: e.target.value || null })}
+              style={{ width: "100%", padding: 8, marginBottom: 10 }}
+            >
+              <option value="">-- None --</option>
+              {tags.map((tag) => (
+                <option key={tag.id} value={tag.id}>
+                  {tag.name}
+                </option>
+              ))}
+            </select>
+
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
               <button
                 onClick={handleSaveEvent}
@@ -596,29 +681,34 @@ const App = () => {
             if (date < today) return ["past-date-cell"];
             return [];
           }}
-          events={events.map((evt) => ({
-            id: evt.id,
-            title: evt.title,
-            start: evt.date,
-            color: evt.color,
-            extendedProps: {
-              notes: evt.notes,
-              createdBy: evt.createdBy,
-            },
-          }))}
+          events={events.map((evt) => {
+            const tag = tags.find((t) => t.id === evt.tagId);
+            return {
+              id: evt.id,
+              title: evt.title,
+              start: evt.date,
+              color: tag ? tag.color : evt.color,
+              extendedProps: {
+                notes: evt.notes,
+                createdBy: evt.createdBy,
+                tagName: tag ? tag.name : null,
+              },
+            };
+          })}
           eventDidMount={(info) => {
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
               info.el._tooltip = null;
             }
 
-            const { notes, createdBy } = info.event.extendedProps;
+            const { notes, createdBy, tagName } = info.event.extendedProps;
             const title = info.event.title;
 
             const tooltip = document.createElement("div");
             tooltip.innerHTML = `
               <div style='background:#333;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;white-space:pre-line;'>
                 📝 <strong>${title}</strong><br/>
+                ${tagName ? `🏷️ <em>${tagName}</em><br/>` : ""}
                 💬 ${notes || "No notes"}<br/>
                 👤 ${createdBy || "Unknown"}
               </div>
