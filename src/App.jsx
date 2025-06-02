@@ -18,7 +18,6 @@ import {
   deleteDoc,
   doc,
   setDoc,
-  where,
 } from "firebase/firestore";
 import { db } from "./firebase.js"; // Your firebase config file
 
@@ -44,23 +43,30 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-const TagManager = ({ tags, setTags }) => {
+const TagManager = ({ tags, setTags, teamId, calendarId, debug }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
-  // Firestore sync functions for tags
   const addTagToFirestore = async (tag) => {
-    const docRef = await addDoc(collection(db, "tags"), tag);
+    const docRef = await addDoc(
+      collection(db, "teams", teamId, "calendars", calendarId, "tags"),
+      tag
+    );
     return docRef.id;
   };
 
   const addTag = async () => {
     if (!newName.trim()) return;
     const newTag = { id: null, name: newName.trim(), color: newColor };
-    const id = await addTagToFirestore(newTag);
-    newTag.id = id;
-    setTags([...tags, newTag]);
-    setNewName("");
+    try {
+      const id = await addTagToFirestore(newTag);
+      newTag.id = id;
+      setTags((old) => [...old, newTag]);
+      setNewName("");
+      debug(`✅ Tag '${newTag.name}' added`);
+    } catch (err) {
+      debug("❌ Firestore addTag error: " + err.message);
+    }
   };
 
   return (
@@ -133,20 +139,7 @@ const TagManager = ({ tags, setTags }) => {
   );
 };
 
-// Returns persistent per-tab calendarId stored in sessionStorage
-const getOrCreateCalendarId = () => {
-  const key = "calendarId";
-  let id = sessionStorage.getItem(key);
-  if (!id) {
-    id = uuidv4();
-    sessionStorage.setItem(key, id);
-  }
-  return id;
-};
-
 const App = () => {
-  const [calendarId] = useState(getOrCreateCalendarId);
-
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
   const [events, setEvents] = useState([]);
@@ -156,6 +149,9 @@ const App = () => {
   const [editMode, setEditMode] = useState("single"); // "single" or "future"
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
+
+  const [teamId, setTeamId] = useState(null);
+  const [calendarId, setCalendarId] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -170,84 +166,60 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
-    calendarId: calendarId, // persist calendarId in event
   });
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
 
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
+  // Initialize Teams context and set teamId & calendarId per tab
   useEffect(() => {
-    debug("🌐 iframe origin: " + window.location.origin);
-    debug("🔰 Initializing Microsoft Teams SDK...");
-
     app
       .initialize()
-      .then(() => {
-        debug("🟢 Teams SDK initialized.");
-        return app.getContext();
-      })
-      .then(() => {
-        debug("🟢 Got Teams context.");
-        authentication.getAuthToken({
-          successCallback: (token) => {
-            debug("✅ Auth token acquired.");
+      .then(() => app.getContext())
+      .then((context) => {
+        const tId = context.teamId || "defaultTeam";
+        setTeamId(tId);
+        debug(`🟢 Teams initialized. Team ID: ${tId}`);
 
-            try {
-              const payload = JSON.parse(atob(token.split(".")[1]));
-              debug("🧾 Token audience: " + payload.aud);
-            } catch (e) {
-              debug("❌ Failed to decode token: " + e.message);
-            }
-
-            fetch("/api/getUser", {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            })
-              .then((res) => res.json())
-              .then((data) => {
-                setUser({
-                  displayName: data.displayName,
-                  email: data.email,
-                });
-                debug("✅ Custom API user fetched: " + data.displayName);
-              })
-              .catch((err) => {
-                debug("❌ Custom API error: " + JSON.stringify(err));
-              });
-          },
-          failureCallback: (err) => {
-            debug("❌ getAuthToken error: " + JSON.stringify(err));
-          },
-        });
-      })
-      .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
+        let storedCalId = sessionStorage.getItem("calendarId");
+        if (!storedCalId) {
+          storedCalId = uuidv4();
+          sessionStorage.setItem("calendarId", storedCalId);
+          debug(`Generated new calendar ID: ${storedCalId}`);
+        } else {
+          debug(`Loaded existing calendar ID from sessionStorage: ${storedCalId}`);
+        }
+        setCalendarId(storedCalId);
+      });
   }, []);
 
-  // Firestore real-time subscriptions for events (filtered by calendarId)
+  // Firestore real-time subscription to events and tags scoped by teamId and calendarId
   useEffect(() => {
-    const eventsQuery = query(
-      collection(db, "events"),
-      where("calendarId", "==", calendarId),
-      orderBy("date", "asc")
-    );
+    if (!teamId || !calendarId) return;
+
+    const eventsCol = collection(db, "teams", teamId, "calendars", calendarId, "events");
+    const tagsCol = collection(db, "teams", teamId, "calendars", calendarId, "tags");
+
+    const eventsQuery = query(eventsCol, orderBy("date", "asc"));
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
+      debug(`🔄 Loaded ${eventsData.length} events`);
     });
 
-    const tagsQuery = query(collection(db, "tags"));
+    const tagsQuery = query(tagsCol);
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
+      debug(`🔄 Loaded ${tagsData.length} tags`);
     });
 
     return () => {
       unsubscribeEvents();
       unsubscribeTags();
     };
-  }, [calendarId]);
+  }, [teamId, calendarId]);
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -278,7 +250,6 @@ const App = () => {
       createdAt,
       originDate: info.dateStr,
       tagName: null,
-      calendarId,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -304,11 +275,15 @@ const App = () => {
   };
 
   const saveEventToFirestore = async (event) => {
+    if (!teamId || !calendarId) {
+      debug("❌ Missing teamId or calendarId for saving event");
+      return;
+    }
     if (event.id) {
-      const eventRef = doc(db, "events", event.id);
+      const eventRef = doc(db, "teams", teamId, "calendars", calendarId, "events", event.id);
       await setDoc(eventRef, event, { merge: true });
     } else {
-      const docRef = await addDoc(collection(db, "events"), event);
+      const docRef = await addDoc(collection(db, "teams", teamId, "calendars", calendarId, "events"), event);
       event.id = docRef.id;
     }
   };
@@ -328,7 +303,6 @@ const App = () => {
       id,
       originDate,
       tagName,
-      calendarId,
     } = newEvent;
 
     if (!title) {
@@ -401,7 +375,6 @@ const App = () => {
             createdBy: user?.displayName || "Unknown",
             createdAt,
             tagName,
-            calendarId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -413,7 +386,6 @@ const App = () => {
           createdAt: new Date().toISOString(),
           originDate: "",
           tagName,
-          calendarId,
         });
       }
     }
@@ -439,7 +411,6 @@ const App = () => {
       createdAt: "",
       originDate: "",
       tagName: null,
-      calendarId,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -469,9 +440,13 @@ const App = () => {
   };
 
   const handleDeleteEvent = async () => {
+    if (!teamId || !calendarId) {
+      debug("❌ Missing teamId or calendarId for deleting event");
+      return;
+    }
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
     try {
-      await deleteDoc(doc(db, "events", selectedEventId));
+      await deleteDoc(doc(db, "teams", teamId, "calendars", calendarId, "events", selectedEventId));
       debug("Event deleted from Firestore");
       setSelectedEventId(null);
       setShowModal(false);
@@ -504,6 +479,10 @@ const App = () => {
   };
 
   const handleDeleteSeries = async () => {
+    if (!teamId || !calendarId) {
+      debug("❌ Missing teamId or calendarId for deleting series");
+      return;
+    }
     const eventToDelete = events.find((e) => e.id === selectedEventId);
     if (!eventToDelete) {
       debug("❌ Event to delete series not found.");
@@ -513,7 +492,7 @@ const App = () => {
 
     const batchDeletes = events
       .filter((e) => e.originDate === eventToDelete.originDate)
-      .map((e) => deleteDoc(doc(db, "events", e.id)));
+      .map((e) => deleteDoc(doc(db, "teams", teamId, "calendars", calendarId, "events", e.id)));
 
     try {
       await Promise.all(batchDeletes);
@@ -552,7 +531,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} />
+        <TagManager tags={tags} setTags={setTags} teamId={teamId} calendarId={calendarId} debug={debug} />
       </div>
 
       {authDebug.length > 0 && (
