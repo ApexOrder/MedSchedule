@@ -24,15 +24,18 @@ const TagManager = ({ tags, setTags }) => {
         placeholder="Tag name"
         value={newName}
         onChange={(e) => setNewName(e.target.value)}
-        style={{ padding: 6, marginRight: 8 }}
+        style={{ padding: 6, marginRight: 8, borderRadius: 4, border: "1px solid #555" }}
       />
       <input
         type="color"
         value={newColor}
         onChange={(e) => setNewColor(e.target.value)}
-        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle" }}
+        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle", borderRadius: 4, border: "1px solid #555" }}
       />
-      <button onClick={addTag} style={{ padding: "6px 12px" }}>
+      <button onClick={addTag} style={{ padding: "6px 12px", borderRadius: 4, border: "none", backgroundColor: "#f97316", color: "#fff", cursor: "pointer", transition: "filter 0.3s" }}
+        onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+        onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+      >
         Add Tag
       </button>
 
@@ -40,16 +43,12 @@ const TagManager = ({ tags, setTags }) => {
         {tags.map((tag) => (
           <span
             key={tag.id}
+            className="tag-pill"
             style={{
-              display: "inline-block",
               backgroundColor: tag.color,
               color: "#fff",
-              padding: "4px 10px",
-              borderRadius: 12,
               marginRight: 6,
               marginBottom: 6,
-              fontSize: 12,
-              userSelect: "none",
             }}
             title={tag.name}
           >
@@ -65,10 +64,10 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
   const [events, setEvents] = useState([]);
-  const [tags, setTags] = useState([]); // <-- start empty, user adds tags
+  const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
-  const [editMode, setEditMode] = useState("single"); // "single" or "series"
+  const [editMode, setEditMode] = useState("single");
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
 
@@ -84,23 +83,10 @@ const App = () => {
     createdBy: "",
     createdAt: "",
     originDate: "",
-    tagId: null, // added tagId to event
+    tagId: null,
   });
 
-  const eventsKey = useMemo(
-    () =>
-      JSON.stringify(
-        events.map((e) => ({
-          id: e.id,
-          title: e.title,
-          date: e.date,
-          notes: e.notes,
-          createdBy: e.createdBy,
-          tagId: e.tagId,
-        }))
-      ),
-    [events]
-  );
+  const eventsKey = useMemo(() => JSON.stringify(events), [events]);
 
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
@@ -509,7 +495,11 @@ const App = () => {
                 border: "none",
                 padding: 10,
                 borderRadius: 4,
+                transition: "filter 0.3s",
+                cursor: "pointer",
               }}
+              onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+              onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
             >
               Yes
             </button>
@@ -522,7 +512,11 @@ const App = () => {
                 border: "none",
                 padding: 10,
                 borderRadius: 4,
+                transition: "filter 0.3s",
+                cursor: "pointer",
               }}
+              onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+              onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
             >
               No
             </button>
@@ -533,17 +527,18 @@ const App = () => {
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         {showModal && (
           <div
+            className="modal-fade"
             style={{
               position: "fixed",
               top: "50%",
               left: "50%",
-              transform: "translate(-50%, -50%)",
               background: "#2d2d2d",
               padding: 20,
               borderRadius: 8,
               zIndex: 9999,
               width: 400,
               boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+              transformOrigin: "center center",
             }}
           >
             <h3 style={{ color: "#fff", marginBottom: 4 }}>
@@ -562,14 +557,14 @@ const App = () => {
               placeholder="Title"
               value={newEvent.title}
               onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-              style={{ width: "100%", marginBottom: 10, padding: 8 }}
+              style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
             />
 
             <textarea
               placeholder="Notes"
               value={newEvent.notes}
               onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
-              style={{ width: "100%", marginBottom: 10, padding: 8 }}
+              style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
             />
 
             <label
@@ -599,7 +594,7 @@ const App = () => {
                   min="1"
                   value={newEvent.interval}
                   onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
-                  style={{ width: "100%", padding: 8 }}
+                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
                 />
 
                 <label style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}>
@@ -609,19 +604,18 @@ const App = () => {
                   type="date"
                   value={newEvent.endDate}
                   onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
-                  style={{ width: "100%", padding: 8 }}
+                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
                 />
               </div>
             )}
 
-            {/* Tag dropdown */}
             <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
               Event Tag:
             </label>
             <select
               value={newEvent.tagId || ""}
               onChange={(e) => setNewEvent({ ...newEvent, tagId: e.target.value || null })}
-              style={{ width: "100%", padding: 8, marginBottom: 10 }}
+              style={{ width: "100%", padding: 8, marginBottom: 10, borderRadius: 4, border: "1px solid #555" }}
             >
               <option value="">-- None --</option>
               {tags.map((tag) => (
@@ -641,7 +635,11 @@ const App = () => {
                   border: "none",
                   borderRadius: 4,
                   flex: 1,
+                  transition: "filter 0.3s",
+                  cursor: "pointer",
                 }}
+                onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+                onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
               >
                 Save
               </button>
@@ -655,7 +653,11 @@ const App = () => {
                   border: "none",
                   borderRadius: 4,
                   flex: 1,
+                  transition: "filter 0.3s",
+                  cursor: "pointer",
                 }}
+                onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
+                onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
               >
                 Cancel
               </button>
@@ -716,11 +718,16 @@ const App = () => {
             tooltip.style.position = "absolute";
             tooltip.style.display = "none";
             tooltip.style.zIndex = 1000;
+            tooltip.style.transition = "opacity 0.3s ease";
+            tooltip.style.opacity = "0";
             document.body.appendChild(tooltip);
             info.el._tooltip = tooltip;
 
             info.el.addEventListener("mouseenter", (e) => {
               tooltip.style.display = "block";
+              requestAnimationFrame(() => {
+                tooltip.style.opacity = "1";
+              });
               tooltip.style.left = e.pageX + 10 + "px";
               tooltip.style.top = e.pageY + 10 + "px";
             });
@@ -731,11 +738,17 @@ const App = () => {
             });
 
             info.el.addEventListener("mouseleave", () => {
-              tooltip.style.display = "none";
+              tooltip.style.opacity = "0";
+              setTimeout(() => {
+                tooltip.style.display = "none";
+              }, 300);
             });
 
             info.el.addEventListener("click", () => {
-              tooltip.style.display = "none";
+              tooltip.style.opacity = "0";
+              setTimeout(() => {
+                tooltip.style.display = "none";
+              }, 300);
             });
 
             const eventDate = new Date(info.event.start);
