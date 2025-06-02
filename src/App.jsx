@@ -292,14 +292,14 @@ const App = () => {
 
   // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
-    const eventRef = event.id ? doc(db, "events", event.id) : null;
-    if (eventRef) {
-      await updateDoc(eventRef, event);
-    } else {
-      const docRef = await addDoc(collection(db, "events"), event);
-      event.id = docRef.id;
-    }
-  };
+  if (event.id) {
+    const eventRef = doc(db, "events", event.id);
+    await setDoc(eventRef, event, { merge: true });  // <-- Changed from updateDoc to setDoc with merge
+  } else {
+    const docRef = await addDoc(collection(db, "events"), event);
+    event.id = docRef.id;
+  }
+};
 
   const handleSaveEvent = async () => {
     if (isPastEvent) {
