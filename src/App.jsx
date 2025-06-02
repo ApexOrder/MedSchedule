@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { app, authentication } from "@microsoft/teams-js";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
+import timeGridPlugin from "@timegridPlugin"; // <-- Corrected import below in actual usage
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "./index.css";
@@ -745,23 +745,69 @@ const App = () => {
                 notes: evt.notes,
                 createdBy: evt.createdBy,
                 tagName: tag ? tag.name : null,
+                tagColor: tag ? tag.color : null,
               },
             };
           })}
+          eventContent={(arg) => {
+            const tagName = arg.event.extendedProps.tagName;
+            const tagColor = arg.event.extendedProps.tagColor || "#f97316";
+
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                <div>{arg.event.title}</div>
+                {tagName && (
+                  <span
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 12,
+                      background: `linear-gradient(to right, rgba(${hexToRgb(tagColor)}, 0) 0%, ${tagColor} 100%)`,
+                      color: "#fff",
+                      fontWeight: 600,
+                      fontSize: 10,
+                      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                      textShadow: "0 0 2px rgba(0,0,0,0.6)",
+                      userSelect: "none",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={tagName}
+                  >
+                    {tagName}
+                  </span>
+                )}
+              </div>
+            );
+          }}
           eventDidMount={(info) => {
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
               info.el._tooltip = null;
             }
 
-            const { notes, createdBy, tagName } = info.event.extendedProps;
+            const { notes, createdBy, tagName, tagColor } = info.event.extendedProps;
+            const color = tagColor || "#f97316";
             const title = info.event.title;
 
             const tooltip = document.createElement("div");
             tooltip.className = "tooltip-custom";
             tooltip.innerHTML = `
               <strong style="color:#f97316; font-weight:700; font-size:16px;">${title}</strong><br/>
-              ${tagName ? `<em style="color:#fb923c; font-style:normal; font-weight:600; margin-top:4px; display:block;">🏷️ ${tagName}</em>` : ""}
+              ${
+                tagName
+                  ? `<span style="
+                      display:inline-block;
+                      padding:2px 8px;
+                      border-radius:12px;
+                      background: linear-gradient(to right, rgba(${hexToRgb(color)}, 0) 0%, ${color} 100%);
+                      color: #fff;
+                      font-weight: 600;
+                      font-size: 12px;
+                      margin: 4px 0;
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                      text-shadow: 0 0 2px rgba(0,0,0,0.6);
+                    ">🏷️ ${tagName}</span><br/>`
+                  : ""
+              }
               <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
               <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
             `;
