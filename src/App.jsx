@@ -118,16 +118,20 @@ const App = () => {
     setIsPastEvent(false);
   };
 
+  // Helper to check if a date string is in the past
+  const isPastDate = (dateStr) => {
+    const eventDate = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventDate < today;
+  };
+
   // Strict handleEventClick that blocks modal for past events
   const handleEventClick = (clickInfo) => {
     const event = events.find((e) => e.id === clickInfo.event.id);
     if (!event) return;
 
-    const eventDate = new Date(event.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (eventDate < today) {
+    if (isPastDate(event.date)) {
       alert("⚠️ This event is in the past and cannot be edited.");
       debug(`Blocked edit of past event dated ${event.date}`);
       return; // Prevent modal open
@@ -581,6 +585,7 @@ const App = () => {
           initialView="dayGridMonth"
           dateClick={handleDateClick}
           eventClick={handleEventClick}
+          eventClassNames={(arg) => (isPastDate(arg.event.startStr) ? ["past-event"] : [])}
           events={events.map((evt) => ({
             id: evt.id,
             title: evt.title,
@@ -638,5 +643,13 @@ const App = () => {
     </div>
   );
 };
+
+// Helper function outside component
+function isPastDate(dateStr) {
+  const eventDate = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return eventDate < today;
+}
 
 export default App;
