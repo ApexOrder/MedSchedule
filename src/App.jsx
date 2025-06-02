@@ -16,6 +16,7 @@ const App = () => {
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [editMode, setEditMode] = useState("single"); // "single" or "series"
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [isPastEvent, setIsPastEvent] = useState(false);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -31,7 +32,6 @@ const App = () => {
     originDate: "",
   });
 
-  // Memoize events key to force FullCalendar remount and refresh tooltips after edits
   const eventsKey = useMemo(
     () =>
       JSON.stringify(
@@ -115,20 +115,38 @@ const App = () => {
     setSelectedEventId(null);
     setShowModal(true);
     setEditMode("single");
+    setIsPastEvent(false);
   };
 
   const handleEventClick = (clickInfo) => {
     const index = events.findIndex((e) => e.id === clickInfo.event.id);
     debug(`Event clicked with id: ${clickInfo.event.id} found at index: ${index}`);
     if (index !== -1) {
-      setNewEvent(events[index]);
-      setSelectedEventId(events[index].id);
+      const eventToEdit = events[index];
+      const eventDate = new Date(eventToEdit.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (eventDate < today) {
+        debug("⚠️ Cannot edit past events.");
+        alert("⚠️ This event is in the past and cannot be edited.");
+        return; // Don't open modal for past events
+      }
+
+      setNewEvent(eventToEdit);
+      setSelectedEventId(eventToEdit.id);
       setShowModal(true);
       setEditMode("single");
+      setIsPastEvent(false);
     }
   };
 
   const handleSaveEvent = () => {
+    if (isPastEvent) {
+      debug("❌ Cannot save: Event is in the past.");
+      return;
+    }
+
     const {
       title,
       date,
@@ -184,16 +202,13 @@ const App = () => {
           start.setDate(start.getDate() + parseInt(interval));
         }
       } else {
-        // THIS IS THE FIXED PART:
         if (isRecurring && interval && endDate && new Date(endDate) >= new Date(date)) {
-          // Remove this single event
           updatedEvents = updatedEvents.filter(e => e.id !== id);
 
-          // Generate full recurring series from this event's date
           let start = new Date(date);
           const end = new Date(endDate);
           const createdAt = new Date().toISOString();
-          const seriesOriginDate = date; // use current event date as origin
+          const seriesOriginDate = date;
 
           while (start <= end) {
             updatedEvents.push({
@@ -210,7 +225,6 @@ const App = () => {
             start.setDate(start.getDate() + parseInt(interval));
           }
         } else {
-          // Just update single event normally
           updatedEvents = updatedEvents.map((e) =>
             e.id === id
               ? {
@@ -273,9 +287,14 @@ const App = () => {
     });
     setSelectedEventId(null);
     setEditMode("single");
+    setIsPastEvent(false);
   };
 
   const requestDeleteEvent = () => {
+    if (isPastEvent) {
+      debug("❌ Cannot delete: Event is in the past.");
+      return;
+    }
     if (selectedEventId === null) {
       debug("❌ No event selected for deletion.");
       return;
@@ -300,9 +319,14 @@ const App = () => {
     setEvents(updatedEvents);
     setShowModal(false);
     setSelectedEventId(null);
+    setIsPastEvent(false);
   };
 
   const requestDeleteSeries = () => {
+    if (isPastEvent) {
+      debug("❌ Cannot delete series: Event is in the past.");
+      return;
+    }
     if (selectedEventId === null) {
       debug("❌ No event selected for series deletion.");
       return;
@@ -332,6 +356,7 @@ const App = () => {
     setEvents(updatedEvents);
     setShowModal(false);
     setSelectedEventId(null);
+    setIsPastEvent(false);
   };
 
   useEffect(() => {
@@ -450,43 +475,12 @@ const App = () => {
               {selectedEventId !== null ? "Edit Event" : "New Event"}
             </h3>
 
-            {/* Show creation info */}
             {selectedEventId !== null && newEvent.createdAt && (
               <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
                 Created: {new Date(newEvent.createdAt).toLocaleString()} <br />
                 Created by: {newEvent.createdBy || "Unknown"}
               </div>
             )}
-
-            {/* Edit mode choice for series */}
-            {selectedEventId !== null &&
-              newEvent.originDate &&
-              events.some((e) => e.originDate === newEvent.originDate && e.id !== newEvent.id) && (
-                <div style={{ marginBottom: 10, color: "#fff" }}>
-                  <label style={{ marginRight: 12 }}>
-                    <input
-                      type="radio"
-                      name="editMode"
-                      value="single"
-                      checked={editMode === "single"}
-                      onChange={() => setEditMode("single")}
-                    />{" "}
-                    Edit this event only
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="editMode"
-                      value="series"
-                      checked={editMode === "series"}
-                      onChange={() => setEditMode("series")}
-                    />{" "}
-                    Edit entire series
-                  </label>
-                </div>
-              )}
-
-            {/* Removed date input */}
 
             <input
               type="text"
@@ -574,45 +568,6 @@ const App = () => {
                 Cancel
               </button>
             </div>
-
-            {selectedEventId !== null && (
-              <div
-                style={{
-                  marginTop: 20,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 8,
-                }}
-              >
-                <button
-                  onClick={requestDeleteEvent}
-                  style={{
-                    background: "#ef4444",
-                    padding: 10,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    flex: 1,
-                  }}
-                >
-                  Delete Event
-                </button>
-
-                <button
-                  onClick={requestDeleteSeries}
-                  style={{
-                    background: "#b91c1c",
-                    padding: 10,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    flex: 1,
-                  }}
-                >
-                  Delete Series
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -638,7 +593,6 @@ const App = () => {
             },
           }))}
           eventDidMount={(info) => {
-            // Clean up any existing tooltip first to avoid duplicates
             if (info.el._tooltip) {
               document.body.removeChild(info.el._tooltip);
               info.el._tooltip = null;
