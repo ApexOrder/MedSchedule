@@ -52,3 +52,10 @@ h2 {
   background-color: #292929 !important;
   border: 1px solid #f97316 !important;
 }
+
+.past-event {
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+  user-select: none;
+}
+
