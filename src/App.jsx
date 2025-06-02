@@ -21,16 +21,6 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase.js";
 
-// Helper to sanitize team name for Firestore path
-function sanitizeTeamName(name) {
-  if (!name) return "default_team";
-  return name
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^a-z0-9_]/g, "")
-    .substring(0, 50);
-}
-
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
   hex = hex.replace(/^#/, "");
@@ -53,30 +43,27 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-const TagManager = ({ tags, setTags, teamId, calendarId, debug }) => {
+const TagManager = ({ tags, setTags, debug }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
-  const tagsCollectionRef = collection(
-    db,
-    "teams",
-    teamId,
-    "calendars",
-    calendarId,
-    "tags"
-  );
-
   const addTagToFirestore = async (tag) => {
-    const docRef = await addDoc(tagsCollectionRef, tag);
+    const docRef = await addDoc(collection(db, "tags"), tag);
     return docRef.id;
   };
 
   const addTag = async () => {
     if (!newName.trim()) return;
     const newTag = { name: newName.trim(), color: newColor };
-    const id = await addTagToFirestore(newTag);
-    setTags((prev) => [...prev, { id, ...newTag }]);
-    setNewName("");
+    try {
+      const id = await addTagToFirestore(newTag);
+      newTag.id = id;
+      setTags((prev) => [...prev, newTag]);
+      debug(`✅ Tag added: ${newTag.name}`);
+      setNewName("");
+    } catch (err) {
+      debug("❌ Error adding tag: " + err.message);
+    }
   };
 
   return (
@@ -91,14 +78,7 @@ const TagManager = ({ tags, setTags, teamId, calendarId, debug }) => {
         type="color"
         value={newColor}
         onChange={(e) => setNewColor(e.target.value)}
-        style={{
-          marginRight: 8,
-          width: 40,
-          height: 30,
-          verticalAlign: "middle",
-          borderRadius: 4,
-          border: "1px solid #555",
-        }}
+        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle", borderRadius: 4, border: "1px solid #555" }}
       />
       <button
         onClick={addTag}
@@ -166,9 +146,7 @@ const App = () => {
   const [editMode, setEditMode] = useState("single"); // "single" or "future"
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
-
-  const [teamId, setTeamId] = useState("default_team");
-  const [calendarId, setCalendarId] = useState(null);
+  const [teamId, setTeamId] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -189,53 +167,94 @@ const App = () => {
 
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
+  // Initialize Teams SDK, get teamId, and user info
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
 
     app
       .initialize()
-      .then(() => app.getContext())
+      .then(() => {
+        debug("🟢 Teams SDK initialized.");
+        return app.getContext();
+      })
       .then((context) => {
-        const rawTeamName = context.teamName || "default team";
-        const sanitized = sanitizeTeamName(rawTeamName);
-        setTeamId(sanitized);
-        debug(`🟢 Teams initialized. Team name: '${rawTeamName}' → '${sanitized}'`);
-
-        let storedCalId = sessionStorage.getItem("calendarId");
-        if (!storedCalId) {
-          storedCalId = uuidv4();
-          sessionStorage.setItem("calendarId", storedCalId);
-          debug(`Generated new calendar ID: ${storedCalId}`);
+        debug("🟢 Got Teams context.");
+        if (context.teamId) {
+          setTeamId(context.teamId);
+          debug(`🆔 teamId: ${context.teamId}`);
         } else {
-          debug(`Loaded calendar ID from sessionStorage: ${storedCalId}`);
+          debug("⚠️ No teamId in context (might be personal scope).");
         }
-        setCalendarId(storedCalId);
-      });
+        authentication.getAuthToken({
+          successCallback: (token) => {
+            debug("✅ Auth token acquired.");
+
+            try {
+              const payload = JSON.parse(atob(token.split(".")[1]));
+              debug("🧾 Token audience: " + payload.aud);
+            } catch (e) {
+              debug("❌ Failed to decode token: " + e.message);
+            }
+
+            fetch("/api/getUser", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            })
+              .then((res) => res.json())
+              .then((data) => {
+                setUser({
+                  displayName: data.displayName,
+                  email: data.email,
+                });
+                debug("✅ Custom API user fetched: " + data.displayName);
+              })
+              .catch((err) => {
+                debug("❌ Custom API error: " + JSON.stringify(err));
+              });
+          },
+          failureCallback: (err) => {
+            debug("❌ getAuthToken error: " + JSON.stringify(err));
+          },
+        });
+      })
+      .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Subscribe to events & tags for this team/calendar
+  // Firestore real-time subscriptions filtered by teamId
   useEffect(() => {
-    if (!teamId || !calendarId) return;
+    if (!teamId) {
+      debug("⏳ Waiting for teamId...");
+      return;
+    }
+    debug("🚀 Subscribing to Firestore for teamId: " + teamId);
 
-    const eventsRef = collection(db, "teams", teamId, "calendars", calendarId, "events");
-    const eventsQuery = query(eventsRef, orderBy("date", "asc"));
+    const eventsQuery = query(
+      collection(db, "events"),
+      orderBy("date", "asc")
+    );
+    // Listen only to events for current teamId
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setEvents(data);
+      const eventsData = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((evt) => evt.teamId === teamId);
+      setEvents(eventsData);
+      debug(`📄 Firestore events snapshot received. Docs count: ${eventsData.length}`);
     });
 
-    const tagsRef = collection(db, "teams", teamId, "calendars", calendarId, "tags");
-    const unsubscribeTags = onSnapshot(tagsRef, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setTags(data);
+    const tagsQuery = query(collection(db, "tags"));
+    const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
+      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setTags(tagsData);
+      debug(`📄 Firestore tags snapshot received. Docs count: ${tagsData.length}`);
     });
 
     return () => {
       unsubscribeEvents();
       unsubscribeTags();
     };
-  }, [teamId, calendarId]);
+  }, [teamId]);
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -266,6 +285,7 @@ const App = () => {
       createdAt,
       originDate: info.dateStr,
       tagName: null,
+      teamId,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -290,29 +310,17 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  // Firestore helpers for events
+  // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
+    if (!event.teamId) {
+      debug("❌ Missing teamId on event, cannot save.");
+      return;
+    }
     if (event.id) {
-      const eventRef = doc(
-        db,
-        "teams",
-        teamId,
-        "calendars",
-        calendarId,
-        "events",
-        event.id
-      );
+      const eventRef = doc(db, "events", event.id);
       await setDoc(eventRef, event, { merge: true });
     } else {
-      const eventsRef = collection(
-        db,
-        "teams",
-        teamId,
-        "calendars",
-        calendarId,
-        "events"
-      );
-      const docRef = await addDoc(eventsRef, event);
+      const docRef = await addDoc(collection(db, "events"), event);
       event.id = docRef.id;
     }
   };
@@ -332,10 +340,16 @@ const App = () => {
       id,
       originDate,
       tagName,
+      teamId,
     } = newEvent;
 
     if (!title) {
       debug("❌ Title is required.");
+      return;
+    }
+
+    if (!teamId) {
+      debug("❌ teamId is missing, cannot save event.");
       return;
     }
 
@@ -358,21 +372,23 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
-        // Update this and future events in series from this date forward
         updatedEvents = updatedEvents.map((e) => {
-          if (e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)) {
+          if (
+            e.originDate === originDate &&
+            new Date(e.date) >= new Date(newEvent.date)
+          ) {
             return {
               ...newEvent,
               id: e.id,
               date: e.date,
               createdBy: e.createdBy,
               createdAt: e.createdAt,
+              teamId,
             };
           }
           return e;
         });
       } else {
-        // Single event update only
         updatedEvents = updatedEvents.map((e) =>
           e.id === id
             ? {
@@ -381,6 +397,7 @@ const App = () => {
                 isRecurring,
                 interval: isRecurring ? interval : 0,
                 endDate: isRecurring ? endDate : "",
+                teamId,
               }
             : e
         );
@@ -403,6 +420,7 @@ const App = () => {
             createdBy: user?.displayName || "Unknown",
             createdAt,
             tagName,
+            teamId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -413,7 +431,7 @@ const App = () => {
           createdBy: user?.displayName || "Unknown",
           createdAt: new Date().toISOString(),
           originDate: "",
-          tagName,
+          teamId,
         });
       }
     }
@@ -439,6 +457,7 @@ const App = () => {
       createdAt: "",
       originDate: "",
       tagName: null,
+      teamId,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -470,9 +489,7 @@ const App = () => {
   const handleDeleteEvent = async () => {
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
     try {
-      await deleteDoc(
-        doc(db, "teams", teamId, "calendars", calendarId, "events", selectedEventId)
-      );
+      await deleteDoc(doc(db, "events", selectedEventId));
       debug("Event deleted from Firestore");
       setSelectedEventId(null);
       setShowModal(false);
@@ -513,10 +530,8 @@ const App = () => {
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
 
     const batchDeletes = events
-      .filter((e) => e.originDate === eventToDelete.originDate)
-      .map((e) =>
-        deleteDoc(doc(db, "teams", teamId, "calendars", calendarId, "events", e.id))
-      );
+      .filter((e) => e.originDate === eventToDelete.originDate && e.teamId === teamId)
+      .map((e) => deleteDoc(doc(db, "events", e.id)));
 
     try {
       await Promise.all(batchDeletes);
@@ -555,7 +570,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} teamId={teamId} calendarId={calendarId} debug={debug} />
+        <TagManager tags={tags} setTags={setTags} debug={debug} />
       </div>
 
       {authDebug.length > 0 && (
@@ -861,21 +876,23 @@ const App = () => {
             if (date < today) return ["past-date-cell"];
             return [];
           }}
-          events={events.map((evt) => {
-            const tag = tags.find((t) => t.name === evt.tagName);
-            return {
-              id: evt.id,
-              title: evt.title,
-              start: evt.date,
-              color: tag ? tag.color : evt.color,
-              extendedProps: {
-                notes: evt.notes,
-                createdBy: evt.createdBy,
-                tagName: tag ? tag.name : null,
-                tagColor: tag ? tag.color : null,
-              },
-            };
-          })}
+          events={events
+            .filter((evt) => evt.teamId === teamId)
+            .map((evt) => {
+              const tag = tags.find((t) => t.name === evt.tagName);
+              return {
+                id: evt.id,
+                title: evt.title,
+                start: evt.date,
+                color: tag ? tag.color : evt.color,
+                extendedProps: {
+                  notes: evt.notes,
+                  createdBy: evt.createdBy,
+                  tagName: tag ? tag.name : null,
+                  tagColor: tag ? tag.color : null,
+                },
+              };
+            })}
           eventContent={(arg) => {
             const tagColor = arg.event.extendedProps.tagColor || "#f97316";
             const rgb = hexToRgb(tagColor);
@@ -937,12 +954,8 @@ const App = () => {
                     ">🏷️ ${tagName}</span><br/>`
                   : ""
               }
-              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${
-                notes || "No notes"
-              }</div>
-              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${
-                createdBy || "Unknown"
-              }</div>
+              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
+              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
             `;
 
             document.body.appendChild(tooltip);
