@@ -17,7 +17,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "./src/"; // Your firebase config file
+import { db } from "./src/firebase.js"; // Your firebase config file
 
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
