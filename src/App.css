@@ -1,4 +1,89 @@
-/* Modal fade + scale animation */
+/* Reset font globally */
+body, input, select, textarea, button {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #ffffff;
+}
+
+/* Background and basic text */
+body {
+  background-color: #1e1e1e;
+  margin: 0;
+  padding: 0;
+}
+
+h2 {
+  text-align: center;
+  color: #f97316;
+  margin: 20px 0;
+}
+
+.debug-label {
+  padding: 10px 15px;
+  margin: 20px auto;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+  width: fit-content;
+  color: #f0f0f0;
+  font-size: 14px;
+  font-family: monospace;
+  border-left: 4px solid #f97316;
+}
+
+/* FullCalendar base */
+.fc {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+.fc-toolbar-title {
+  color: #f97316;
+}
+
+.fc-button {
+  background-color: #f97316 !important;
+  border: none !important;
+  color: white !important;
+  border-radius: 4px !important;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.fc-button:hover {
+  background-color: #fb923c !important;
+}
+
+/* Calendar day numbers */
+.fc-daygrid-day-number {
+  color: #f97316;
+}
+
+.fc-day-today {
+  background-color: #292929 !important;
+  border: 1px solid #f97316 !important;
+}
+
+/* Past events faded and disabled */
+.fc-event.past-event {
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+  user-select: none;
+  cursor: not-allowed !important;
+}
+
+/* Past date cells styling */
+.past-date-cell {
+  background-color: #2a2a2a !important;
+  color: #777 !important;
+  cursor: default !important;
+  user-select: none;
+}
+
+.past-date-cell .fc-daygrid-day-number {
+  opacity: 0.4 !important;
+  color: #777 !important;
+}
+
+/* Modal fade + scale */
 .modal-fade {
   animation: fadeInScale 0.3s ease forwards;
   transform-origin: center center;
@@ -20,6 +105,7 @@ button {
   transition: background-color 0.3s ease, transform 0.15s ease;
   cursor: pointer;
   border-radius: 4px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 button:hover {
@@ -46,21 +132,39 @@ button:focus {
   user-select: none;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   cursor: default;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .tag-pill:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 6px rgba(0,0,0,0.4);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
 }
 
 /* FullCalendar header buttons */
 .fc-button {
-  transition: background-color 0.3s ease;
-  cursor: pointer;
   border-radius: 4px !important;
 }
 
 .fc-button:hover {
-  background-color: #fb923c !important; /* lighter orange on hover */
+  background-color: #fb923c !important;
   color: white !important;
+}
+
+/* Tooltip improved style */
+.tooltip-custom {
+  background: rgba(20, 20, 20, 0.95);
+  color: #eee;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  white-space: pre-line;
+  max-width: 260px;
+  z-index: 11000;
+  user-select: none;
+  opacity: 0;
+  position: absolute;
 }
