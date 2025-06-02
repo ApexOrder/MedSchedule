@@ -8,6 +8,29 @@ import { v4 as uuidv4 } from "uuid";
 import "./index.css";
 import "./App.css";
 
+// Helper to convert hex to rgb for gradient alpha
+function hexToRgb(hex) {
+  hex = hex.replace(/^#/, "");
+  let bigint = parseInt(hex, 16);
+  let r, g, b;
+
+  if (hex.length === 6) {
+    r = (bigint >> 16) & 255;
+    g = (bigint >> 8) & 255;
+    b = bigint & 255;
+  } else if (hex.length === 3) {
+    r = (bigint >> 8) & 15;
+    g = (bigint >> 4) & 15;
+    b = bigint & 15;
+    r = (r << 4) | r;
+    g = (g << 4) | g;
+    b = (b << 4) | b;
+  } else {
+    return "0,0,0";
+  }
+  return `${r},${g},${b}`;
+}
+
 const TagManager = ({ tags, setTags }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
@@ -32,9 +55,19 @@ const TagManager = ({ tags, setTags }) => {
         onChange={(e) => setNewColor(e.target.value)}
         style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle", borderRadius: 4, border: "1px solid #555" }}
       />
-      <button onClick={addTag} style={{ padding: "6px 12px", borderRadius: 4, border: "none", backgroundColor: "#f97316", color: "#fff", cursor: "pointer", transition: "filter 0.3s" }}
-        onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-        onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+      <button
+        onClick={addTag}
+        style={{
+          padding: "6px 12px",
+          borderRadius: 4,
+          border: "none",
+          backgroundColor: "#f97316",
+          color: "#fff",
+          cursor: "pointer",
+          transition: "filter 0.3s",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+        onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
       >
         Add Tag
       </button>
@@ -44,13 +77,31 @@ const TagManager = ({ tags, setTags }) => {
           <span
             key={tag.id}
             className="tag-pill"
+            title={tag.name}
             style={{
-              backgroundColor: tag.color,
+              background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
               color: "#fff",
               marginRight: 6,
               marginBottom: 6,
+              padding: "6px 14px",
+              borderRadius: 20,
+              fontSize: 13,
+              fontWeight: 600,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+              cursor: "default",
+              userSelect: "none",
+              transition: "transform 0.3s ease, box-shadow 0.3s ease",
+              fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
+              display: "inline-block",
             }}
-            title={tag.name}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.1)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
+            }}
           >
             {tag.name}
           </span>
@@ -699,51 +750,50 @@ const App = () => {
           })}
           eventDidMount={(info) => {
             if (info.el._tooltip) {
-  document.body.removeChild(info.el._tooltip);
-  info.el._tooltip = null;
-}
+              document.body.removeChild(info.el._tooltip);
+              info.el._tooltip = null;
+            }
 
-const { notes, createdBy, tagName } = info.event.extendedProps;
-const title = info.event.title;
+            const { notes, createdBy, tagName } = info.event.extendedProps;
+            const title = info.event.title;
 
-const tooltip = document.createElement("div");
-tooltip.className = "tooltip-custom";
-tooltip.innerHTML = `
-  <strong style="color:#f97316; font-weight:700; font-size:16px;">${title}</strong><br/>
-  ${tagName ? `<em style="color:#fb923c; font-style:normal; font-weight:600; margin-top:4px; display:block;">🏷️ ${tagName}</em>` : ""}
-  <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
-  <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
-`;
+            const tooltip = document.createElement("div");
+            tooltip.className = "tooltip-custom";
+            tooltip.innerHTML = `
+              <strong style="color:#f97316; font-weight:700; font-size:16px;">${title}</strong><br/>
+              ${tagName ? `<em style="color:#fb923c; font-style:normal; font-weight:600; margin-top:4px; display:block;">🏷️ ${tagName}</em>` : ""}
+              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
+              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
+            `;
 
-document.body.appendChild(tooltip);
-info.el._tooltip = tooltip;
+            document.body.appendChild(tooltip);
+            info.el._tooltip = tooltip;
 
-info.el.addEventListener("mouseenter", (e) => {
-  tooltip.style.opacity = "1";
-  tooltip.style.display = "block";
-  tooltip.style.left = e.pageX + 12 + "px";
-  tooltip.style.top = e.pageY + 12 + "px";
-});
+            info.el.addEventListener("mouseenter", (e) => {
+              tooltip.style.opacity = "1";
+              tooltip.style.display = "block";
+              tooltip.style.left = e.pageX + 12 + "px";
+              tooltip.style.top = e.pageY + 12 + "px";
+            });
 
-info.el.addEventListener("mousemove", (e) => {
-  tooltip.style.left = e.pageX + 12 + "px";
-  tooltip.style.top = e.pageY + 12 + "px";
-});
+            info.el.addEventListener("mousemove", (e) => {
+              tooltip.style.left = e.pageX + 12 + "px";
+              tooltip.style.top = e.pageY + 12 + "px";
+            });
 
-info.el.addEventListener("mouseleave", () => {
-  tooltip.style.opacity = "0";
-  setTimeout(() => {
-    tooltip.style.display = "none";
-  }, 250);
-});
+            info.el.addEventListener("mouseleave", () => {
+              tooltip.style.opacity = "0";
+              setTimeout(() => {
+                tooltip.style.display = "none";
+              }, 250);
+            });
 
-info.el.addEventListener("click", () => {
-  tooltip.style.opacity = "0";
-  setTimeout(() => {
-    tooltip.style.display = "none";
-  }, 250);
-});
-
+            info.el.addEventListener("click", () => {
+              tooltip.style.opacity = "0";
+              setTimeout(() => {
+                tooltip.style.display = "none";
+              }, 250);
+            });
 
             const eventDate = new Date(info.event.start);
             const today = new Date();
