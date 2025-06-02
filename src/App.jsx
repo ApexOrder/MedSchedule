@@ -11,15 +11,16 @@ import "./App.css";
 import {
   collection,
   query,
+  where,
   orderBy,
   onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
-  setDoc,
+  setDoc
 } from "firebase/firestore";
-import { db } from "./firebase.js";
+import { db } from "./firebase.js"; // Your firebase config file
 
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
@@ -43,27 +44,27 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-const TagManager = ({ tags, setTags, debug }) => {
+const TagManager = ({ tags, setTags, channelId, debug }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
+  // Firestore sync functions for tags
   const addTagToFirestore = async (tag) => {
-    const docRef = await addDoc(collection(db, "tags"), tag);
+    const tagWithChannel = { ...tag, channelId };
+    const docRef = await addDoc(collection(db, "tags"), tagWithChannel);
     return docRef.id;
   };
 
   const addTag = async () => {
-    if (!newName.trim()) return;
-    const newTag = { name: newName.trim(), color: newColor };
-    try {
-      const id = await addTagToFirestore(newTag);
-      newTag.id = id;
-      setTags((prev) => [...prev, newTag]);
-      debug(`✅ Tag added: ${newTag.name}`);
-      setNewName("");
-    } catch (err) {
-      debug("❌ Error adding tag: " + err.message);
+    if (!newName.trim() || !channelId) {
+      debug("❌ Cannot add tag: missing name or channelId.");
+      return;
     }
+    const newTag = { id: null, name: newName.trim(), color: newColor, channelId };
+    const id = await addTagToFirestore(newTag);
+    newTag.id = id;
+    setTags((prev) => [...prev, newTag]);
+    setNewName("");
   };
 
   return (
@@ -146,7 +147,9 @@ const App = () => {
   const [editMode, setEditMode] = useState("single"); // "single" or "future"
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
-  const [teamId, setTeamId] = useState(null);
+
+  // New: store channelId from Teams context
+  const [channelId, setChannelId] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -161,13 +164,13 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
+    channelId: null,
   });
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
 
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
-  // Initialize Teams SDK, get teamId, and user info
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
@@ -180,12 +183,9 @@ const App = () => {
       })
       .then((context) => {
         debug("🟢 Got Teams context.");
-        if (context.teamId) {
-          setTeamId(context.teamId);
-          debug(`🆔 teamId: ${context.teamId}`);
-        } else {
-          debug("⚠️ No teamId in context (might be personal scope).");
-        }
+        debug(`TeamId: ${context.teamId || "N/A"}, ChannelId: ${context.channelId || "N/A"}`);
+        setChannelId(context.channelId || null);
+
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
@@ -222,39 +222,34 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Firestore real-time subscriptions filtered by teamId
+  // Firestore real-time subscriptions filtered by channelId
   useEffect(() => {
-    if (!teamId) {
-      debug("⏳ Waiting for teamId...");
+    if (!channelId) {
+      debug("❌ No channelId available, skipping Firestore subscriptions.");
       return;
     }
-    debug("🚀 Subscribing to Firestore for teamId: " + teamId);
 
     const eventsQuery = query(
       collection(db, "events"),
+      where("channelId", "==", channelId),
       orderBy("date", "asc")
     );
-    // Listen only to events for current teamId
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((evt) => evt.teamId === teamId);
+      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
-      debug(`📄 Firestore events snapshot received. Docs count: ${eventsData.length}`);
     });
 
-    const tagsQuery = query(collection(db, "tags"));
+    const tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
-      debug(`📄 Firestore tags snapshot received. Docs count: ${tagsData.length}`);
     });
 
     return () => {
       unsubscribeEvents();
       unsubscribeTags();
     };
-  }, [teamId]);
+  }, [channelId]);
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -267,6 +262,11 @@ const App = () => {
     if (isPastDate(info.dateStr)) {
       alert("⚠️ Cannot create events on past dates.");
       debug(`Blocked create on past date ${info.dateStr}`);
+      return;
+    }
+    if (!channelId) {
+      alert("⚠️ Cannot create events: channel ID not detected.");
+      debug("❌ No channelId, cannot create event.");
       return;
     }
 
@@ -285,7 +285,7 @@ const App = () => {
       createdAt,
       originDate: info.dateStr,
       tagName: null,
-      teamId,
+      channelId,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -312,15 +312,16 @@ const App = () => {
 
   // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
-    if (!event.teamId) {
-      debug("❌ Missing teamId on event, cannot save.");
+    if (!channelId) {
+      debug("❌ No channelId, cannot save event.");
       return;
     }
+    const eventWithChannel = { ...event, channelId };
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
-      await setDoc(eventRef, event, { merge: true });
+      await setDoc(eventRef, eventWithChannel, { merge: true });
     } else {
-      const docRef = await addDoc(collection(db, "events"), event);
+      const docRef = await addDoc(collection(db, "events"), eventWithChannel);
       event.id = docRef.id;
     }
   };
@@ -340,7 +341,6 @@ const App = () => {
       id,
       originDate,
       tagName,
-      teamId,
     } = newEvent;
 
     if (!title) {
@@ -348,8 +348,8 @@ const App = () => {
       return;
     }
 
-    if (!teamId) {
-      debug("❌ teamId is missing, cannot save event.");
+    if (!channelId) {
+      debug("❌ No channelId, cannot save event.");
       return;
     }
 
@@ -383,7 +383,7 @@ const App = () => {
               date: e.date,
               createdBy: e.createdBy,
               createdAt: e.createdAt,
-              teamId,
+              channelId,
             };
           }
           return e;
@@ -397,7 +397,7 @@ const App = () => {
                 isRecurring,
                 interval: isRecurring ? interval : 0,
                 endDate: isRecurring ? endDate : "",
-                teamId,
+                channelId,
               }
             : e
         );
@@ -419,8 +419,8 @@ const App = () => {
             endDate,
             createdBy: user?.displayName || "Unknown",
             createdAt,
-            tagName,
-            teamId,
+            tagName: tagName || null,
+            channelId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -431,7 +431,8 @@ const App = () => {
           createdBy: user?.displayName || "Unknown",
           createdAt: new Date().toISOString(),
           originDate: "",
-          teamId,
+          tagName: tagName || null,
+          channelId,
         });
       }
     }
@@ -457,7 +458,7 @@ const App = () => {
       createdAt: "",
       originDate: "",
       tagName: null,
-      teamId,
+      channelId: null,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -530,7 +531,7 @@ const App = () => {
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
 
     const batchDeletes = events
-      .filter((e) => e.originDate === eventToDelete.originDate && e.teamId === teamId)
+      .filter((e) => e.originDate === eventToDelete.originDate)
       .map((e) => deleteDoc(doc(db, "events", e.id)));
 
     try {
@@ -570,7 +571,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} debug={debug} />
+        <TagManager tags={tags} setTags={setTags} channelId={channelId} debug={debug} />
       </div>
 
       {authDebug.length > 0 && (
@@ -876,23 +877,21 @@ const App = () => {
             if (date < today) return ["past-date-cell"];
             return [];
           }}
-          events={events
-            .filter((evt) => evt.teamId === teamId)
-            .map((evt) => {
-              const tag = tags.find((t) => t.name === evt.tagName);
-              return {
-                id: evt.id,
-                title: evt.title,
-                start: evt.date,
-                color: tag ? tag.color : evt.color,
-                extendedProps: {
-                  notes: evt.notes,
-                  createdBy: evt.createdBy,
-                  tagName: tag ? tag.name : null,
-                  tagColor: tag ? tag.color : null,
-                },
-              };
-            })}
+          events={events.map((evt) => {
+            const tag = tags.find((t) => t.name === evt.tagName);
+            return {
+              id: evt.id,
+              title: evt.title,
+              start: evt.date,
+              color: tag ? tag.color : evt.color,
+              extendedProps: {
+                notes: evt.notes,
+                createdBy: evt.createdBy,
+                tagName: tag ? tag.name : null,
+                tagColor: tag ? tag.color : null,
+              },
+            };
+          })}
           eventContent={(arg) => {
             const tagColor = arg.event.extendedProps.tagColor || "#f97316";
             const rgb = hexToRgb(tagColor);
