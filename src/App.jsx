@@ -7,6 +7,18 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import "./App.css";
 
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import { db } from "./src/"; // Your firebase config file
+
 // Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
   hex = hex.replace(/^#/, "");
@@ -33,9 +45,27 @@ const TagManager = ({ tags, setTags }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
-  const addTag = () => {
+  // Firestore sync functions for tags
+  const addTagToFirestore = async (tag) => {
+    const docRef = await addDoc(collection(db, "tags"), tag);
+    return docRef.id;
+  };
+
+  const saveTag = async (tag) => {
+    if (tag.id) {
+      await updateDoc(doc(db, "tags", tag.id), tag);
+    } else {
+      const id = await addTagToFirestore(tag);
+      tag.id = id;
+    }
+  };
+
+  const addTag = async () => {
     if (!newName.trim()) return;
-    setTags([...tags, { id: uuidv4(), name: newName.trim(), color: newColor }]);
+    const newTag = { id: null, name: newName.trim(), color: newColor };
+    const id = await addTagToFirestore(newTag);
+    newTag.id = id;
+    setTags([...tags, newTag]);
     setNewName("");
   };
 
@@ -187,6 +217,26 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
+  // Firestore real-time subscriptions
+  useEffect(() => {
+    const eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
+    const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setEvents(eventsData);
+    });
+
+    const tagsQuery = query(collection(db, "tags"));
+    const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
+      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setTags(tagsData);
+    });
+
+    return () => {
+      unsubscribeEvents();
+      unsubscribeTags();
+    };
+  }, []);
+
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
     const today = new Date();
@@ -240,7 +290,18 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  const handleSaveEvent = () => {
+  // Firestore update/add helpers
+  const saveEventToFirestore = async (event) => {
+    const eventRef = event.id ? doc(db, "events", event.id) : null;
+    if (eventRef) {
+      await updateDoc(eventRef, event);
+    } else {
+      const docRef = await addDoc(collection(db, "events"), event);
+      event.id = docRef.id;
+    }
+  };
+
+  const handleSaveEvent = async () => {
     if (isPastEvent) {
       debug("❌ Cannot save: Event is in the past.");
       return;
@@ -281,13 +342,12 @@ const App = () => {
 
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
-        // Update this and future events in the series (date >= newEvent.date)
+        // Update this and future events in series from this date forward
         updatedEvents = updatedEvents.map(e => {
           if (
             e.originDate === originDate &&
-            new Date(e.date) >= new Date(date)
+            new Date(e.date) >= new Date(newEvent.date)
           ) {
-            // Update event properties but keep id, createdBy, createdAt, and date intact
             return {
               ...newEvent,
               id: e.id,
@@ -345,8 +405,14 @@ const App = () => {
       }
     }
 
-    setEvents(updatedEvents);
-    debug("✅ Event saved. Total events: " + updatedEvents.length);
+    // Save all updated events to Firestore sequentially
+    try {
+      await Promise.all(updatedEvents.map((evt) => saveEventToFirestore(evt)));
+      debug("✅ Events saved to Firestore");
+    } catch (err) {
+      debug("❌ Firestore save error: " + err.message);
+    }
+
     setShowModal(false);
     setNewEvent({
       id: null,
@@ -389,14 +455,17 @@ const App = () => {
     });
   };
 
-  const handleDeleteEvent = () => {
+  const handleDeleteEvent = async () => {
     debug(`🗑️ Deleting event with id ${selectedEventId}`);
-    const updatedEvents = events.filter((e) => e.id !== selectedEventId);
-    debug("Events after deleting event: " + updatedEvents.length);
-    setEvents(updatedEvents);
-    setShowModal(false);
-    setSelectedEventId(null);
-    setIsPastEvent(false);
+    try {
+      await deleteDoc(doc(db, "events", selectedEventId));
+      debug("Event deleted from Firestore");
+      setSelectedEventId(null);
+      setShowModal(false);
+      setIsPastEvent(false);
+    } catch (err) {
+      debug("❌ Firestore delete error: " + err.message);
+    }
   };
 
   const requestDeleteSeries = () => {
@@ -421,27 +490,28 @@ const App = () => {
     });
   };
 
-  const handleDeleteSeries = () => {
+  const handleDeleteSeries = async () => {
     const eventToDelete = events.find((e) => e.id === selectedEventId);
     if (!eventToDelete) {
       debug("❌ Event to delete series not found.");
       return;
     }
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
-    const updatedEvents = events.filter((e) => e.originDate !== eventToDelete.originDate);
-    debug("Events after deleting series: " + updatedEvents.length);
-    setEvents(updatedEvents);
-    setShowModal(false);
-    setSelectedEventId(null);
-    setIsPastEvent(false);
-  };
 
-  useEffect(() => {
-    if (selectedEventId !== null) {
-      debug(`Selected event ID: ${selectedEventId}`);
-      debug(`Current total events: ${events.length}`);
+    const batchDeletes = events
+      .filter((e) => e.originDate === eventToDelete.originDate)
+      .map((e) => deleteDoc(doc(db, "events", e.id)));
+
+    try {
+      await Promise.all(batchDeletes);
+      debug("Series deleted from Firestore");
+      setSelectedEventId(null);
+      setShowModal(false);
+      setIsPastEvent(false);
+    } catch (err) {
+      debug("❌ Firestore series delete error: " + err.message);
     }
-  }, [selectedEventId, events]);
+  };
 
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
@@ -519,8 +589,8 @@ const App = () => {
                 transition: "filter 0.3s",
                 cursor: "pointer",
               }}
-              onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-              onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
             >
               Yes
             </button>
@@ -536,8 +606,8 @@ const App = () => {
                 transition: "filter 0.3s",
                 cursor: "pointer",
               }}
-              onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-              onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
             >
               No
             </button>
@@ -684,8 +754,8 @@ const App = () => {
                   transition: "filter 0.3s",
                   cursor: "pointer",
                 }}
-                onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-                onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
               >
                 Save
               </button>
@@ -702,8 +772,8 @@ const App = () => {
                   transition: "filter 0.3s",
                   cursor: "pointer",
                 }}
-                onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-                onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
               >
                 Cancel
               </button>
@@ -725,8 +795,8 @@ const App = () => {
                     cursor: "pointer",
                     transition: "filter 0.3s",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-                  onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                  onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
                 >
                   Delete Event
                 </button>
@@ -746,8 +816,8 @@ const App = () => {
                       cursor: "pointer",
                       transition: "filter 0.3s",
                     }}
-                    onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.1)"}
-                    onMouseLeave={e => e.currentTarget.style.filter = "brightness(1)"}
+                    onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
                   >
                     Delete Series
                   </button>
