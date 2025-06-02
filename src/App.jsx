@@ -644,6 +644,14 @@ const App = () => {
               tooltip.style.display = "none";
             });
 
+            dayCellClassNames={(arg) => {
+  const date = arg.date;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return ["past-date-cell"];
+  return [];
+}}
+
             // Disable pointer events and fade past events:
             const eventDate = new Date(info.event.start);
             const today = new Date();
