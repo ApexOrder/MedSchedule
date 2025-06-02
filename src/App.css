@@ -1,73 +1,66 @@
-body {
-  background-color: #1e1e1e;
-  color: #ffffff;
-  font-family: "Segoe UI", sans-serif;
-  margin: 0;
-  padding: 0;
+/* Modal fade + scale animation */
+.modal-fade {
+  animation: fadeInScale 0.3s ease forwards;
+  transform-origin: center center;
 }
 
-h2 {
-  text-align: center;
-  color: #f97316;
-  margin: 20px 0;
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
-.debug-label {
-  padding: 10px 15px;
-  margin: 20px auto;
-  border-radius: 8px;
-  background-color: #2a2a2a;
-  width: fit-content;
-  color: #f0f0f0;
-  font-size: 14px;
-  font-family: monospace;
-  border-left: 4px solid #f97316;
+/* Buttons hover/focus */
+button {
+  transition: background-color 0.3s ease, transform 0.15s ease;
+  cursor: pointer;
+  border-radius: 4px;
 }
 
-.fc {
-  background-color: #1e1e1e;
-  color: #fff;
+button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
 }
 
-.fc-toolbar-title {
-  color: #f97316;
+button:active {
+  transform: translateY(0);
+  filter: brightness(0.9);
 }
 
+button:focus {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+/* Tag pill hover effect */
+.tag-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  user-select: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: default;
+}
+
+.tag-pill:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 6px rgba(0,0,0,0.4);
+}
+
+/* FullCalendar header buttons */
 .fc-button {
-  background-color: #f97316 !important;
-  border: none !important;
-  color: white !important;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
   border-radius: 4px !important;
 }
 
 .fc-button:hover {
-  background-color: #fb923c !important;
+  background-color: #fb923c !important; /* lighter orange on hover */
+  color: white !important;
 }
-
-.fc-daygrid-day-number {
-  color: #f97316;
-}
-
-.fc-day-today {
-  background-color: #292929 !important;
-  border: 1px solid #f97316 !important;
-}
-
-.past-event {
-  opacity: 0.4 !important;
-  pointer-events: none !important;
-  user-select: none;
-}
-.past-date-cell {
-  background-color: #2a2a2a !important;
-  color: #777 !important;
-  cursor: default !important;
-  user-select: none;
-}
-
-.past-date-cell .fc-daygrid-day-number {
-  opacity: 0.4 !important;
-  color: #777 !important;
-}
-
-
