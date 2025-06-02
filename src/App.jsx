@@ -18,6 +18,7 @@ import {
   deleteDoc,
   doc,
   setDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "./firebase.js";
 
@@ -43,10 +44,11 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-const TagManager = ({ tags, setTags }) => {
+const TagManager = ({ tags, setTags, channelId }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
+  // Add new tag with channelId
   const addTagToFirestore = async (tag) => {
     const docRef = await addDoc(collection(db, "tags"), tag);
     return docRef.id;
@@ -54,7 +56,7 @@ const TagManager = ({ tags, setTags }) => {
 
   const addTag = async () => {
     if (!newName.trim()) return;
-    const newTag = { id: null, name: newName.trim(), color: newColor };
+    const newTag = { id: null, name: newName.trim(), color: newColor, channelId };
     const id = await addTagToFirestore(newTag);
     newTag.id = id;
     setTags([...tags, newTag]);
@@ -156,6 +158,7 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
+    channelId: null,
   });
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
@@ -176,18 +179,11 @@ const App = () => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
 
-        // Extract channelId reliably
         const chId = context.channelId || (context.channel && context.channel.id) || null;
         debug("ChannelId detected: " + chId);
 
-        if (!chId) {
-          debug("❌ No ChannelId detected. App must run inside a Teams channel tab.");
-          return;
-        }
-
         setChannelId(chId);
 
-        // Then get auth token etc as before...
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
@@ -224,23 +220,23 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Subscribe to Firestore events and tags filtered by channelId
+  // Subscribe to Firestore events filtered by channelId (if set)
   useEffect(() => {
-    if (!channelId) return;
-
-    const eventsQuery = query(
-      collection(db, "events"),
-      orderBy("date", "asc")
-    );
+    let eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
+    if (channelId) {
+      eventsQuery = query(collection(db, "events"), where("channelId", "==", channelId), orderBy("date", "asc"));
+    }
 
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((evt) => evt.channelId === channelId);
+      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
     });
 
-    const tagsQuery = query(collection(db, "tags"));
+    // Tags filtered by channelId too
+    let tagsQuery = query(collection(db, "tags"));
+    if (channelId) {
+      tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
+    }
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
@@ -527,14 +523,6 @@ const App = () => {
     }
   };
 
-  if (!channelId) {
-    return (
-      <div style={{ padding: 20, color: "red", fontWeight: "bold" }}>
-        ⚠️ This app must be opened as a tab inside a Microsoft Teams channel to function correctly.
-      </div>
-    );
-  }
-
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
       <h2
@@ -561,7 +549,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} />
+        <TagManager tags={tags} setTags={setTags} channelId={channelId} />
       </div>
 
       {authDebug.length > 0 && (
