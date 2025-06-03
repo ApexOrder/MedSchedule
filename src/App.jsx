@@ -5,9 +5,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
-
 import "./App.css";
-
 import {
   collection,
   query,
@@ -44,18 +42,18 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
+// TagManager is now channel-aware
 const TagManager = ({ tags, setTags, channelId }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
-  // Add new tag with channelId
   const addTagToFirestore = async (tag) => {
     const docRef = await addDoc(collection(db, "tags"), tag);
     return docRef.id;
   };
 
   const addTag = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !channelId) return;
     const newTag = { id: null, name: newName.trim(), color: newColor, channelId };
     const id = await addTagToFirestore(newTag);
     newTag.id = id;
@@ -165,6 +163,7 @@ const App = () => {
 
   const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
 
+  // Microsoft Teams SDK + channel context detection
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
@@ -179,6 +178,7 @@ const App = () => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
 
+        // Channel detection (classic Teams + new Teams fallback)
         const chId = context.channelId || (context.channel && context.channel.id) || null;
         debug("ChannelId detected: " + chId);
 
@@ -187,7 +187,6 @@ const App = () => {
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
-
             try {
               const payload = JSON.parse(atob(token.split(".")[1]));
               debug("🧾 Token audience: " + payload.aud);
@@ -220,23 +219,17 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Subscribe to Firestore events filtered by channelId (if set)
+  // Firestore events/tags subscriptions filtered by channelId
   useEffect(() => {
-    let eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
-    if (channelId) {
-      eventsQuery = query(collection(db, "events"), where("channelId", "==", channelId), orderBy("date", "asc"));
-    }
+    if (!channelId) return; // Don't subscribe until channel is detected
 
+    let eventsQuery = query(collection(db, "events"), where("channelId", "==", channelId), orderBy("date", "asc"));
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
     });
 
-    // Tags filtered by channelId too
-    let tagsQuery = query(collection(db, "tags"));
-    if (channelId) {
-      tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
-    }
+    let tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
@@ -247,7 +240,7 @@ const App = () => {
       unsubscribeTags();
     };
   }, [channelId]);
-
+  // Utility to check past date
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
     const today = new Date();
@@ -255,13 +248,13 @@ const App = () => {
     return eventDate < today;
   };
 
+  // --- Calendar handlers ---
   const handleDateClick = (info) => {
     if (isPastDate(info.dateStr)) {
       alert("⚠️ Cannot create events on past dates.");
       debug(`Blocked create on past date ${info.dateStr}`);
       return;
     }
-
     debug("📅 Date clicked: " + info.dateStr);
     const createdAt = new Date().toISOString();
     setNewEvent({
@@ -302,6 +295,7 @@ const App = () => {
     setIsPastEvent(false);
   };
 
+  // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
@@ -522,7 +516,6 @@ const App = () => {
       debug("❌ Firestore series delete error: " + err.message);
     }
   };
-
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
       <h2
