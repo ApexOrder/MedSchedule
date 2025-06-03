@@ -244,9 +244,9 @@ debug("String equality? " + (channelId === fromFirestore));
 
   // TAGS QUERY - channel filtered (optional, but keeps tags per channel)
   let tagsQuery = query(
-    collection(db, "tags"),
-    where("channelId", "==", channelId)
-  );
+  collection(db, "events"),
+  where("channelId", "==", channelId)
+);
   debug("🔍 Firestore tags query created with channelId: " + channelId);
 
   const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
