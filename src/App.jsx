@@ -140,6 +140,8 @@ const App = () => {
   const [editMode, setEditMode] = useState("single");
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
+  const [channelId, setChannelId] = useState(null);
+
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -172,6 +174,9 @@ const App = () => {
       .then((context) => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
+        const chId = context.channelId || (context.channel && context.channel.id) || null;
+  debug("ChannelId detected: " + chId);
+  setChannelId(chId);
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
