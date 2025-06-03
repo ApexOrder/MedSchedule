@@ -42,7 +42,7 @@ function hexToRgb(hex) {
 }
 
 // TagManager (no channel awareness for revert)
-const TagManager = ({ tags, setTags }) => {
+const TagManager = ({ tags, setTags, channelId }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
@@ -52,7 +52,7 @@ const TagManager = ({ tags, setTags }) => {
   };
 
   const addTag = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !channelId) return;
     const newTag = { id: null, name: newName.trim(), color: newColor, channelId };
     const id = await addTagToFirestore(newTag);
     newTag.id = id;
