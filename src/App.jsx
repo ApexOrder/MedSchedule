@@ -223,6 +223,12 @@ const App = () => {
   }
 
   // EVENTS QUERY - channel filtered
+    // Compare channelId values in detail
+const fromFirestore = "19:OmWSz3Jf8mRrptrBI0AxYV1FoBLpx0wHAySZBCCM4cs1@thread.tacv2";
+debug("ChannelId in context: [" + channelId + "] (len: " + channelId.length + ")");
+debug("ChannelId sample from Firestore: [" + fromFirestore + "] (len: " + fromFirestore.length + ")");
+debug("String equality? " + (channelId === fromFirestore));
+
   let eventsQuery = query(
     collection(db, "events"),
     where("channelId", "==", channelId),
