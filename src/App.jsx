@@ -232,6 +232,7 @@ const App = () => {
 
     let eventsQuery = query(
   collection(db, "events"),
+  where("channelId", "==", channelId),
   orderBy("date", "asc")
 );
 
