@@ -230,10 +230,10 @@ debug("ChannelId sample from Firestore: [" + fromFirestore + "] (len: " + fromFi
 debug("String equality? " + (channelId === fromFirestore));
 
   let eventsQuery = query(
-    collection(db, "events"),
-    where("channelId", "==", channelId),
-    orderBy("date", "asc")
-  );
+  collection(db, "events"),
+  where("channelId", "==", channelId)
+);
+
   debug("🔍 Firestore events query created with channelId: " + channelId);
 
   const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
