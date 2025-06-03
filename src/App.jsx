@@ -213,32 +213,50 @@ const App = () => {
 
   // Firestore events/tags subscriptions (NO channel filter)
   useEffect(() => {
-    debug("Firestore filter - channelId: " + channelId);
-    let eventsQuery = query(
-  collection(db, "events"),
-  where("channelId", "==", channelId),
-  orderBy("date", "asc")
-);
+  debug("⏳ Firestore effect running. channelId: " + channelId);
 
-    const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      debug("Events loaded from Firestore:", eventsData);
-      setEvents(eventsData);
-      debug("📦 Firestore events snapshot: ");
-      debug(eventsData);
-    });
+  if (!channelId) {
+    debug("❌ No channelId yet, skipping Firestore subscription.");
+    setEvents([]); // clear out events if channelId is lost/changed
+    setTags([]);
+    return;
+  }
 
-    let tagsQuery = query(collection(db, "tags"));
-    const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
-      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setTags(tagsData);
-    });
+  // EVENTS QUERY - channel filtered
+  let eventsQuery = query(
+    collection(db, "events"),
+    where("channelId", "==", channelId),
+    orderBy("date", "asc")
+  );
+  debug("🔍 Firestore events query created with channelId: " + channelId);
 
-    return () => {
-      unsubscribeEvents();
-      unsubscribeTags();
-    };
-  }, []);
+  const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+    const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    debug("📦 Firestore events snapshot:", eventsData);
+    setEvents(eventsData);
+  });
+
+  // TAGS QUERY - channel filtered (optional, but keeps tags per channel)
+  let tagsQuery = query(
+    collection(db, "tags"),
+    where("channelId", "==", channelId)
+  );
+  debug("🔍 Firestore tags query created with channelId: " + channelId);
+
+  const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
+    const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    debug("🏷️ Firestore tags snapshot:", tagsData);
+    setTags(tagsData);
+  });
+
+  // Cleanup
+  return () => {
+    debug("🧹 Firestore unsubscribe called for channelId: " + channelId);
+    unsubscribeEvents();
+    unsubscribeTags();
+  };
+}, [channelId]);  // <<<< CRUCIAL: useEffect depends on channelId!
+
 
   const calendarEvents = useMemo(() => {
     const mapped = events
