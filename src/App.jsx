@@ -207,7 +207,12 @@ const App = () => {
 
   // Firestore events/tags subscriptions (NO channel filter)
   useEffect(() => {
-    let eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
+    let eventsQuery = query(
+  collection(db, "events"),
+  where("channelId", "==", channelId),
+  orderBy("date", "asc")
+);
+
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
@@ -259,32 +264,39 @@ const App = () => {
 
   // --- Calendar handlers ---
   const handleDateClick = (info) => {
-    if (isPastDate(info.dateStr)) {
-      alert("⚠️ Cannot create events on past dates.");
-      debug(`Blocked create on past date ${info.dateStr}`);
-      return;
-    }
-    debug("📅 Date clicked: " + info.dateStr);
-    const createdAt = new Date().toISOString();
-    setNewEvent({
-      id: null,
-      title: "",
-      notes: "",
-      date: info.dateStr,
-      isRecurring: false,
-      interval: 7,
-      endDate: "",
-      color: "#f97316",
-      createdBy: user?.displayName || "Unknown",
-      createdAt,
-      originDate: info.dateStr,
-      tagName: null,
-    });
-    setSelectedEventId(null);
-    setShowModal(true);
-    setEditMode("single");
-    setIsPastEvent(false);
-  };
+  if (!channelId) {
+    debug("❌ Cannot create event: channelId not loaded yet!");
+    alert("Teams channel not ready yet. Please wait a moment and try again.");
+    return;
+  }
+  if (isPastDate(info.dateStr)) {
+    alert("⚠️ Cannot create events on past dates.");
+    debug(`Blocked create on past date ${info.dateStr}`);
+    return;
+  }
+  debug("📅 Date clicked: " + info.dateStr);
+  const createdAt = new Date().toISOString();
+  setNewEvent({
+    id: null,
+    title: "",
+    notes: "",
+    date: info.dateStr,
+    isRecurring: false,
+    interval: 7,
+    endDate: "",
+    color: "#f97316",
+    createdBy: user?.displayName || "Unknown",
+    createdAt,
+    originDate: info.dateStr,
+    tagName: null,
+    channelId: channelId, // <<<< ADD THIS LINE!
+  });
+  setSelectedEventId(null);
+  setShowModal(true);
+  setEditMode("single");
+  setIsPastEvent(false);
+};
+
 
   const handleEventClick = (clickInfo) => {
     const event = events.find((e) => e.id === clickInfo.event.id);
@@ -315,127 +327,138 @@ const App = () => {
   };
 
   const handleSaveEvent = async () => {
-    if (isPastEvent) {
-      debug("❌ Cannot save: Event is in the past.");
+  if (!channelId) {
+    debug("❌ Cannot save: channelId is not set!");
+    alert("Teams channel not ready yet. Please wait a moment and try again.");
+    return;
+  }
+  if (isPastEvent) {
+    debug("❌ Cannot save: Event is in the past.");
+    return;
+  }
+
+  const {
+    title,
+    date,
+    isRecurring,
+    interval,
+    endDate,
+    id,
+    originDate,
+    tagName,
+  } = newEvent;
+
+  if (!title) {
+    debug("❌ Title is required.");
+    return;
+  }
+
+  if (isRecurring) {
+    if (!endDate) {
+      debug("❌ End date is required for recurring events.");
       return;
     }
-
-    const {
-      title,
-      date,
-      isRecurring,
-      interval,
-      endDate,
-      id,
-      originDate,
-      tagName,
-    } = newEvent;
-
-    if (!title) {
-      debug("❌ Title is required.");
+    if (!interval || interval < 1) {
+      debug("❌ Interval must be at least 1 day for recurring events.");
       return;
     }
-
-    if (isRecurring) {
-      if (!endDate) {
-        debug("❌ End date is required for recurring events.");
-        return;
-      }
-      if (!interval || interval < 1) {
-        debug("❌ Interval must be at least 1 day for recurring events.");
-        return;
-      }
-      if (new Date(endDate) < new Date(date)) {
-        debug("❌ End date must be on or after start date.");
-        return;
-      }
+    if (new Date(endDate) < new Date(date)) {
+      debug("❌ End date must be on or after start date.");
+      return;
     }
+  }
 
-    let newEvents = [];
+  let newEvents = [];
 
-    if (selectedEventId !== null) {
-      if (editMode === "future" && originDate) {
-        const updateTargets = events.filter(
-          (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
-        );
-        newEvents = updateTargets.map((e) => ({
+  if (selectedEventId !== null) {
+    if (editMode === "future" && originDate) {
+      const updateTargets = events.filter(
+        (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
+      );
+      newEvents = updateTargets.map((e) => ({
+        ...newEvent,
+        id: e.id,
+        date: e.date,
+        createdBy: e.createdBy,
+        createdAt: e.createdAt,
+        channelId: channelId, // <<<< PATCH HERE
+      }));
+    } else {
+      newEvents = [
+        {
           ...newEvent,
-          id: e.id,
-          date: e.date,
-          createdBy: e.createdBy,
-          createdAt: e.createdAt,
-        }));
-      } else {
-        newEvents = [
-          {
-            ...newEvent,
-            originDate: isRecurring ? newEvent.originDate || date : "",
-            isRecurring,
-            interval: isRecurring ? interval : 0,
-            endDate: isRecurring ? endDate : "",
-          },
-        ];
+          originDate: isRecurring ? newEvent.originDate || date : "",
+          isRecurring,
+          interval: isRecurring ? interval : 0,
+          endDate: isRecurring ? endDate : "",
+          channelId: channelId, // <<<< PATCH HERE
+        },
+      ];
+    }
+  } else {
+    if (isRecurring && endDate) {
+      let start = new Date(date);
+      const end = new Date(endDate);
+      const createdAt = new Date().toISOString();
+
+      while (start <= end) {
+        newEvents.push({
+          ...newEvent,
+          id: uuidv4(),
+          date: start.toISOString().split("T")[0],
+          originDate: date,
+          isRecurring: true,
+          interval: parseInt(interval),
+          endDate,
+          createdBy: user?.displayName || "Unknown",
+          createdAt,
+          tagName,
+          channelId: channelId, // <<<< PATCH HERE
+        });
+        start.setDate(start.getDate() + parseInt(interval));
       }
     } else {
-      if (isRecurring && endDate) {
-        let start = new Date(date);
-        const end = new Date(endDate);
-        const createdAt = new Date().toISOString();
-
-        while (start <= end) {
-          newEvents.push({
-            ...newEvent,
-            id: uuidv4(),
-            date: start.toISOString().split("T")[0],
-            originDate: date,
-            isRecurring: true,
-            interval: parseInt(interval),
-            endDate,
-            createdBy: user?.displayName || "Unknown",
-            createdAt,
-            tagName,
-          });
-          start.setDate(start.getDate() + parseInt(interval));
-        }
-      } else {
-        newEvents = [
-          {
-            ...newEvent,
-            id: uuidv4(),
-            createdBy: user?.displayName || "Unknown",
-            createdAt: new Date().toISOString(),
-            originDate: "",
-          },
-        ];
-      }
+      newEvents = [
+        {
+          ...newEvent,
+          id: uuidv4(),
+          createdBy: user?.displayName || "Unknown",
+          createdAt: new Date().toISOString(),
+          originDate: "",
+          channelId: channelId, // <<<< PATCH HERE
+        },
+      ];
     }
+  }
 
-    try {
-      await Promise.all(newEvents.map((evt) => saveEventToFirestore(evt)));
-      debug("✅ Events saved to Firestore");
-    } catch (err) {
-      debug("❌ Firestore save error: " + err.message);
-    }
+  try {
+    await Promise.all(newEvents.map((evt) => saveEventToFirestore(evt)));
+    debug("✅ Events saved to Firestore");
+  } catch (err) {
+    debug("❌ Firestore save error: " + err.message);
+  }
 
-    setShowModal(false);
-    setNewEvent({
-      id: null,
-      title: "",
-      notes: "",
-      date: "",
-      isRecurring: false,
-      interval: 7,
-      endDate: "",
-      color: "#f97316",
-      createdBy: "",
-      createdAt: "",
-      originDate: "",
-      tagName: null,
-    });
-    setSelectedEventId(null);
-    setEditMode("single");
-    setIsPastEvent(false);
-  };
+  setShowModal(false);
+  setNewEvent({
+    id: null,
+    title: "",
+    notes: "",
+    date: "",
+    isRecurring: false,
+    interval: 7,
+    endDate: "",
+    color: "#f97316",
+    createdBy: "",
+    createdAt: "",
+    originDate: "",
+    tagName: null,
+    channelId: channelId, // <<<< PATCH HERE (optional, for next create)
+  });
+  setSelectedEventId(null);
+  setEditMode("single");
+  setIsPastEvent(false);
+};
+
 
   const requestDeleteEvent = () => {
     if (isPastEvent) {
