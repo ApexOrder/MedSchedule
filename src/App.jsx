@@ -15,7 +15,6 @@ import {
   setDoc,
   deleteDoc,
   doc,
-  where,
 } from "firebase/firestore";
 import { db } from "./firebase.js";
 
@@ -41,8 +40,8 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-// TagManager is now channel-aware
-const TagManager = ({ tags, setTags, channelId }) => {
+// TagManager (no channel awareness for revert)
+const TagManager = ({ tags, setTags }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
 
@@ -52,8 +51,8 @@ const TagManager = ({ tags, setTags, channelId }) => {
   };
 
   const addTag = async () => {
-    if (!newName.trim() || !channelId) return;
-    const newTag = { id: null, name: newName.trim(), color: newColor, channelId };
+    if (!newName.trim()) return;
+    const newTag = { id: null, name: newName.trim(), color: newColor };
     const id = await addTagToFirestore(newTag);
     newTag.id = id;
     setTags([...tags, newTag]);
@@ -137,10 +136,9 @@ const App = () => {
   const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
-  const [editMode, setEditMode] = useState("single"); // "single" or "future"
+  const [editMode, setEditMode] = useState("single");
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
-  const [channelId, setChannelId] = useState(null);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -155,20 +153,12 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
-    channelId: null,
   });
 
+  const eventsKey = useMemo(() => JSON.stringify(events), [events]);
   const debug = (msg) => setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
 
-  // Utility to check past date
-  const isPastDate = (dateStr) => {
-    const eventDate = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return eventDate < today;
-  };
-
-  // Microsoft Teams SDK + channel context detection
+  // Microsoft Teams SDK (just for user)
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
@@ -181,9 +171,6 @@ const App = () => {
       .then((context) => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
-        const chId = context.channelId || (context.channel && context.channel.id) || null;
-        debug("ChannelId detected: " + chId);
-        setChannelId(chId);
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
@@ -218,39 +205,28 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Firestore events/tags subscriptions filtered by channelId
+  // Firestore events/tags subscriptions (NO channel filter)
   useEffect(() => {
-    debug("FIRESTORE EFFECT - channelId: " + channelId);
-    if (!channelId) {
-      debug("Waiting for channelId before setting up Firestore subscription.");
-      setEvents([]);
-      setTags([]);
-      return;
-    }
-    let eventsQuery = query(
-      collection(db, "events"),
-      where("channelId", "==", channelId),
-      orderBy("date", "asc")
-    );
+    let eventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
       debug("📦 Firestore events snapshot: ");
       debug(eventsData);
     });
-    let tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
+
+    let tagsQuery = query(collection(db, "tags"));
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
     });
+
     return () => {
       unsubscribeEvents();
       unsubscribeTags();
     };
-    // eslint-disable-next-line
-  }, [channelId]);
+  }, []);
 
-  // Memoized calendarEvents
   const calendarEvents = useMemo(() => {
     const mapped = events
       .filter((evt) => !!evt.date && !!evt.title)
@@ -272,19 +248,20 @@ const App = () => {
     debug("🗓️ calendarEvents mapped for FullCalendar:");
     debug(mapped);
     return mapped;
-    // eslint-disable-next-line
   }, [events, tags]);
+
+  const isPastDate = (dateStr) => {
+    const eventDate = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventDate < today;
+  };
 
   // --- Calendar handlers ---
   const handleDateClick = (info) => {
     if (isPastDate(info.dateStr)) {
       alert("⚠️ Cannot create events on past dates.");
       debug(`Blocked create on past date ${info.dateStr}`);
-      return;
-    }
-    if (!channelId) {
-      debug("❌ Cannot create event: channelId not set!");
-      alert("Waiting for Teams channel. Please try again in a moment.");
       return;
     }
     debug("📅 Date clicked: " + info.dateStr);
@@ -302,7 +279,6 @@ const App = () => {
       createdAt,
       originDate: info.dateStr,
       tagName: null,
-      channelId,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -329,10 +305,6 @@ const App = () => {
 
   // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
-    if (!event.channelId) {
-      debug("❌ Refusing to save: missing channelId");
-      return;
-    }
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
       await setDoc(eventRef, event, { merge: true });
@@ -343,11 +315,6 @@ const App = () => {
   };
 
   const handleSaveEvent = async () => {
-    if (!channelId) {
-      debug("❌ Cannot save: channelId is not set!");
-      alert("Teams channel not ready yet. Please wait a moment and try again.");
-      return;
-    }
     if (isPastEvent) {
       debug("❌ Cannot save: Event is in the past.");
       return;
@@ -397,7 +364,6 @@ const App = () => {
           date: e.date,
           createdBy: e.createdBy,
           createdAt: e.createdAt,
-          channelId: channelId,
         }));
       } else {
         newEvents = [
@@ -407,7 +373,6 @@ const App = () => {
             isRecurring,
             interval: isRecurring ? interval : 0,
             endDate: isRecurring ? endDate : "",
-            channelId: channelId,
           },
         ];
       }
@@ -429,7 +394,6 @@ const App = () => {
             createdBy: user?.displayName || "Unknown",
             createdAt,
             tagName,
-            channelId: channelId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -441,7 +405,6 @@ const App = () => {
             createdBy: user?.displayName || "Unknown",
             createdAt: new Date().toISOString(),
             originDate: "",
-            channelId: channelId,
           },
         ];
       }
@@ -468,7 +431,6 @@ const App = () => {
       createdAt: "",
       originDate: "",
       tagName: null,
-      channelId: channelId,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -580,7 +542,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} channelId={channelId} />
+        <TagManager tags={tags} setTags={setTags} />
       </div>
 
       {authDebug.length > 0 && (
@@ -657,179 +619,199 @@ const App = () => {
       )}
 
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
-        {channelId ? (
-          showModal && (
-            <div
-              className="modal-fade"
+        {showModal && (
+          <div
+            className="modal-fade"
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              background: "#2d2d2d",
+              padding: 20,
+              borderRadius: 8,
+              zIndex: 9999,
+              width: 400,
+              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+              transformOrigin: "center center",
+            }}
+          >
+            <h3 style={{ color: "#fff", marginBottom: 4 }}>
+              {selectedEventId !== null ? "Edit Event" : "New Event"}
+            </h3>
+
+            {selectedEventId !== null && newEvent.createdAt && (
+              <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
+                Created: {new Date(newEvent.createdAt).toLocaleString()} <br />
+                Created by: {newEvent.createdBy || "Unknown"}
+              </div>
+            )}
+
+            <input
+              type="text"
+              placeholder="Title"
+              value={newEvent.title}
+              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+              style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
+            />
+
+            {selectedEventId !== null && newEvent.isRecurring && (
+              <div style={{ marginBottom: 10, color: "#fff" }}>
+                <label style={{ marginRight: 12 }}>
+                  <input
+                    type="radio"
+                    name="editMode"
+                    value="single"
+                    checked={editMode === "single"}
+                    onChange={() => setEditMode("single")}
+                  />{" "}
+                  Edit this event only
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="editMode"
+                    value="future"
+                    checked={editMode === "future"}
+                    onChange={() => setEditMode("future")}
+                  />{" "}
+                  Edit this and future events
+                </label>
+              </div>
+            )}
+
+            <textarea
+              placeholder="Notes"
+              value={newEvent.notes}
+              onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
+              style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
+            />
+
+            <label
               style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                background: "#2d2d2d",
-                padding: 20,
-                borderRadius: 8,
-                zIndex: 9999,
-                width: 400,
-                boxShadow: "0 0 10px rgba(0,0,0,0.5)",
-                transformOrigin: "center center",
+                display: "flex",
+                alignItems: "center",
+                marginBottom: 10,
+                gap: 8,
+                color: "#fff",
               }}
             >
-              <h3 style={{ color: "#fff", marginBottom: 4 }}>
-                {selectedEventId !== null ? "Edit Event" : "New Event"}
-              </h3>
-
-              {selectedEventId !== null && newEvent.createdAt && (
-                <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
-                  Created: {new Date(newEvent.createdAt).toLocaleString()} <br />
-                  Created by: {newEvent.createdBy || "Unknown"}
-                </div>
-              )}
-
               <input
-                type="text"
-                placeholder="Title"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
+                type="checkbox"
+                checked={newEvent.isRecurring}
+                onChange={(e) => setNewEvent({ ...newEvent, isRecurring: e.target.checked })}
               />
+              <span>Recurring event</span>
+            </label>
 
-              {selectedEventId !== null && newEvent.isRecurring && (
-                <div style={{ marginBottom: 10, color: "#fff" }}>
-                  <label style={{ marginRight: 12 }}>
-                    <input
-                      type="radio"
-                      name="editMode"
-                      value="single"
-                      checked={editMode === "single"}
-                      onChange={() => setEditMode("single")}
-                    />{" "}
-                    Edit this event only
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="editMode"
-                      value="future"
-                      checked={editMode === "future"}
-                      onChange={() => setEditMode("future")}
-                    />{" "}
-                    Edit this and future events
-                  </label>
-                </div>
-              )}
-
-              <textarea
-                placeholder="Notes"
-                value={newEvent.notes}
-                onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
-                style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
-              />
-
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginBottom: 10,
-                  gap: 8,
-                  color: "#fff",
-                }}
-              >
+            {newEvent.isRecurring && (
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
+                  Interval (days):
+                </label>
                 <input
-                  type="checkbox"
-                  checked={newEvent.isRecurring}
-                  onChange={(e) => setNewEvent({ ...newEvent, isRecurring: e.target.checked })}
+                  type="number"
+                  min="1"
+                  value={newEvent.interval}
+                  onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
+                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
                 />
-                <span>Recurring event</span>
-              </label>
 
-              {newEvent.isRecurring && (
-                <div style={{ marginBottom: 10 }}>
-                  <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
-                    Interval (days):
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newEvent.interval}
-                    onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
-                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
-                  />
-
-                  <label style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}>
-                    End date:
-                  </label>
-                  <input
-                    type="date"
-                    value={newEvent.endDate}
-                    onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
-                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
-                  />
-                </div>
-              )}
-
-              <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
-                Event Tag:
-              </label>
-              <select
-                value={newEvent.tagName || ""}
-                onChange={(e) => setNewEvent({ ...newEvent, tagName: e.target.value || null })}
-                style={{ width: "100%", padding: 8, marginBottom: 10, borderRadius: 4, border: "1px solid #555" }}
-              >
-                <option value="">-- None --</option>
-                {tags.map((tag) => (
-                  <option key={tag.id} value={tag.name}>
-                    {tag.name}
-                  </option>
-                ))}
-              </select>
-
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  onClick={handleSaveEvent}
-                  style={{
-                    background: "#10b981",
-                    padding: 10,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    flex: "1 1 45%",
-                    transition: "filter 0.3s",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
-                >
-                  Save
-                </button>
-
-                <button
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    background: "#ef4444",
-                    padding: 10,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    flex: "1 1 45%",
-                    transition: "filter 0.3s",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
-                >
-                  Cancel
-                </button>
+                <label style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}>
+                  End date:
+                </label>
+                <input
+                  type="date"
+                  value={newEvent.endDate}
+                  onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
+                />
               </div>
+            )}
 
-              {selectedEventId !== null && (
-                <>
+            <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
+              Event Tag:
+            </label>
+            <select
+              value={newEvent.tagName || ""}
+              onChange={(e) => setNewEvent({ ...newEvent, tagName: e.target.value || null })}
+              style={{ width: "100%", padding: 8, marginBottom: 10, borderRadius: 4, border: "1px solid #555" }}
+            >
+              <option value="">-- None --</option>
+              {tags.map((tag) => (
+                <option key={tag.id} value={tag.name}>
+                  {tag.name}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={handleSaveEvent}
+                style={{
+                  background: "#10b981",
+                  padding: 10,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  flex: "1 1 45%",
+                  transition: "filter 0.3s",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+              >
+                Save
+              </button>
+
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: "#ef4444",
+                  padding: 10,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  flex: "1 1 45%",
+                  transition: "filter 0.3s",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+              >
+                Cancel
+              </button>
+            </div>
+
+            {selectedEventId !== null && (
+              <>
+                <button
+                  className="delete-event"
+                  onClick={requestDeleteEvent}
+                  style={{
+                    marginTop: 12,
+                    width: "100%",
+                    backgroundColor: "#b91c1c",
+                    color: "#fff",
+                    border: "none",
+                    padding: 10,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    transition: "filter 0.3s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+                >
+                  Delete Event
+                </button>
+
+                {newEvent.isRecurring && (
                   <button
                     className="delete-event"
-                    onClick={requestDeleteEvent}
+                    onClick={requestDeleteSeries}
                     style={{
-                      marginTop: 12,
+                      marginTop: 8,
                       width: "100%",
-                      backgroundColor: "#b91c1c",
+                      backgroundColor: "#7f1d1d",
                       color: "#fff",
                       border: "none",
                       padding: 10,
@@ -840,52 +822,28 @@ const App = () => {
                     onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
                     onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
                   >
-                    Delete Event
+                    Delete Series
                   </button>
-
-                  {newEvent.isRecurring && (
-                    <button
-                      className="delete-event"
-                      onClick={requestDeleteSeries}
-                      style={{
-                        marginTop: 8,
-                        width: "100%",
-                        backgroundColor: "#7f1d1d",
-                        color: "#fff",
-                        border: "none",
-                        padding: 10,
-                        borderRadius: 4,
-                        cursor: "pointer",
-                        transition: "filter 0.3s",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
-                    >
-                      Delete Series
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )
-        ) : (
-          <div style={{ color: "#f97316", textAlign: "center", marginTop: 80, fontSize: 22 }}>
-            <span>Waiting for Teams channel info…</span>
+                )}
+              </>
+            )}
           </div>
         )}
-        {channelId && (
-          <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            headerToolbar={{
-              start: "dayGridMonth,timeGridWeek,timeGridDay",
-              center: "title",
-              end: "prev,next today",
-            }}
-            initialView="dayGridMonth"
-            initialDate={new Date().toISOString().split("T")[0]}
-            events={calendarEvents}
-          />
-        )}
+
+        <FullCalendar
+          key={eventsKey}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          headerToolbar={{
+            start: "dayGridMonth,timeGridWeek,timeGridDay",
+            center: "title",
+            end: "prev,next today",
+          }}
+          initialView="dayGridMonth"
+          initialDate={new Date().toISOString().split("T")[0]}
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          events={calendarEvents}
+        />
       </div>
     </div>
   );
