@@ -19,7 +19,6 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase.js";
 
-// Helper to convert hex to rgb for gradient alpha
 function hexToRgb(hex) {
   hex = hex.replace(/^#/, "");
   let bigint = parseInt(hex, 16);
@@ -41,7 +40,6 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
-// TagManager (no channel awareness for revert)
 const TagManager = ({ tags, setTags, channelId }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
@@ -53,10 +51,15 @@ const TagManager = ({ tags, setTags, channelId }) => {
 
   const addTag = async () => {
     if (!newName.trim() || !channelId) return;
-    const newTag = { id: null, name: newName.trim(), color: newColor, channelId };
+    const newTag = {
+      id: null,
+      name: newName.trim(),
+      color: newColor,
+      channelId: channelId,
+    };
     const id = await addTagToFirestore(newTag);
     newTag.id = id;
-    setTags([...tags, newTag]);
+    setTags((prev) => [...prev, newTag]);
     setNewName("");
   };
 
@@ -141,8 +144,6 @@ const App = () => {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
   const [channelId, setChannelId] = useState(null);
-
-
   const [newEvent, setNewEvent] = useState({
     id: null,
     title: "",
@@ -156,12 +157,11 @@ const App = () => {
     createdAt: "",
     originDate: "",
     tagName: null,
+    channelId: null,
   });
-
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
   const debug = (msg) => setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
 
-  // Microsoft Teams SDK (just for user)
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
@@ -175,8 +175,8 @@ const App = () => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
         const chId = context.channelId || (context.channel && context.channel.id) || null;
-  debug("ChannelId detected: " + chId);
-  setChannelId(chId);
+        debug("ChannelId detected: " + chId);
+        setChannelId(chId);
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
@@ -211,71 +211,41 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // Firestore events/tags subscriptions (NO channel filter)
   useEffect(() => {
-  debug("⏳ Firestore effect running. channelId: " + channelId);
-
-  if (!channelId) {
-    debug("❌ No channelId yet, skipping Firestore subscription.");
-    setEvents([]);
-    setTags([]);
-    return;
-  }
-
-  // EVENTS QUERY (already filtered)
-  let eventsQuery = query(
-    collection(db, "events"),
-    where("channelId", "==", channelId),
-    orderBy("date", "asc")
-  );
-  const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-    const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    debug("📦 Firestore events snapshot:", eventsData);
-    setEvents(eventsData);
-  });
-
-  // TAGS QUERY (filtered by channel)
-  let tagsQuery = query(
-    collection(db, "tags"),
-    where("channelId", "==", channelId)
-  );
-  const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
-    const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    debug("🏷️ Firestore tags snapshot:", tagsData);
-    setTags(tagsData);
-  });
-
-  return () => {
-    debug("🧹 Firestore unsubscribe called for channelId: " + channelId);
-    unsubscribeEvents();
-    unsubscribeTags();
-  };
-}, [channelId]);
-
-
-
-  const calendarEvents = useMemo(() => {
-    const mapped = events
-      .filter((evt) => !!evt.date && !!evt.title)
-      .map((evt) => {
-        const tag = tags.find((t) => t.name === evt.tagName);
-        return {
-          id: evt.id,
-          title: evt.title,
-          start: evt.date,
-          color: tag ? tag.color : evt.color || "#f97316",
-          extendedProps: {
-            notes: evt.notes,
-            createdBy: evt.createdBy,
-            tagName: tag ? tag.name : null,
-            tagColor: tag ? tag.color : null,
-          },
-        };
-      });
-    debug("🗓️ calendarEvents mapped for FullCalendar:");
-    debug(mapped);
-    return mapped;
-  }, [events, tags]);
+    debug("⏳ Firestore effect running. channelId: " + channelId);
+    if (!channelId) {
+      debug("❌ No channelId yet, skipping Firestore subscription.");
+      setEvents([]);
+      setTags([]);
+      return;
+    }
+    let eventsQuery = query(
+      collection(db, "events"),
+      where("channelId", "==", channelId),
+      orderBy("date", "asc")
+    );
+    debug("🔍 Firestore events query created with channelId: " + channelId);
+    const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      debug("📦 Firestore events snapshot:", eventsData);
+      setEvents(eventsData);
+    });
+    let tagsQuery = query(
+      collection(db, "tags"),
+      where("channelId", "==", channelId)
+    );
+    debug("🔍 Firestore tags query created with channelId: " + channelId);
+    const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
+      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      debug("🏷️ Firestore tags snapshot:", tagsData);
+      setTags(tagsData);
+    });
+    return () => {
+      debug("🧹 Firestore unsubscribe called for channelId: " + channelId);
+      unsubscribeEvents();
+      unsubscribeTags();
+    };
+  }, [channelId]);
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -284,52 +254,48 @@ const App = () => {
     return eventDate < today;
   };
 
-  // --- Calendar handlers ---
   const handleDateClick = (info) => {
-  if (!channelId) {
-    debug("❌ Cannot create event: channelId not loaded yet!");
-    alert("Teams channel not ready yet. Please wait a moment and try again.");
-    return;
-  }
-  if (isPastDate(info.dateStr)) {
-    alert("⚠️ Cannot create events on past dates.");
-    debug(`Blocked create on past date ${info.dateStr}`);
-    return;
-  }
-  debug("📅 Date clicked: " + info.dateStr);
-  const createdAt = new Date().toISOString();
-  setNewEvent({
-    id: null,
-    title: "",
-    notes: "",
-    date: info.dateStr,
-    isRecurring: false,
-    interval: 7,
-    endDate: "",
-    color: "#f97316",
-    createdBy: user?.displayName || "Unknown",
-    createdAt,
-    originDate: info.dateStr,
-    tagName: null,
-    channelId: channelId, // <<<< ADD THIS LINE!
-  });
-  setSelectedEventId(null);
-  setShowModal(true);
-  setEditMode("single");
-  setIsPastEvent(false);
-};
-
+    if (!channelId) {
+      debug("❌ Cannot create event: channelId not loaded yet!");
+      alert("Teams channel not ready yet. Please wait a moment and try again.");
+      return;
+    }
+    if (isPastDate(info.dateStr)) {
+      alert("⚠️ Cannot create events on past dates.");
+      debug(`Blocked create on past date ${info.dateStr}`);
+      return;
+    }
+    debug("📅 Date clicked: " + info.dateStr);
+    const createdAt = new Date().toISOString();
+    setNewEvent({
+      id: null,
+      title: "",
+      notes: "",
+      date: info.dateStr,
+      isRecurring: false,
+      interval: 7,
+      endDate: "",
+      color: "#f97316",
+      createdBy: user?.displayName || "Unknown",
+      createdAt,
+      originDate: info.dateStr,
+      tagName: null,
+      channelId: channelId,
+    });
+    setSelectedEventId(null);
+    setShowModal(true);
+    setEditMode("single");
+    setIsPastEvent(false);
+  };
 
   const handleEventClick = (clickInfo) => {
     const event = events.find((e) => e.id === clickInfo.event.id);
     if (!event) return;
-
     if (isPastDate(event.date)) {
       alert("⚠️ This event is in the past and cannot be edited.");
       debug(`Blocked edit of past event dated ${event.date}`);
       return;
     }
-
     setNewEvent(event);
     setSelectedEventId(event.id);
     setShowModal(true);
@@ -337,7 +303,6 @@ const App = () => {
     setIsPastEvent(false);
   };
 
-  // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
@@ -349,140 +314,130 @@ const App = () => {
   };
 
   const handleSaveEvent = async () => {
-  if (!channelId) {
-    debug("❌ Cannot save: channelId is not set!");
-    alert("Teams channel not ready yet. Please wait a moment and try again.");
-    return;
-  }
-  if (isPastEvent) {
-    debug("❌ Cannot save: Event is in the past.");
-    return;
-  }
-
-  const {
-    title,
-    date,
-    isRecurring,
-    interval,
-    endDate,
-    id,
-    originDate,
-    tagName,
-  } = newEvent;
-
-  if (!title) {
-    debug("❌ Title is required.");
-    return;
-  }
-
-  if (isRecurring) {
-    if (!endDate) {
-      debug("❌ End date is required for recurring events.");
+    if (!channelId) {
+      debug("❌ Cannot save: channelId is not set!");
+      alert("Teams channel not ready yet. Please wait a moment and try again.");
       return;
     }
-    if (!interval || interval < 1) {
-      debug("❌ Interval must be at least 1 day for recurring events.");
+    if (isPastEvent) {
+      debug("❌ Cannot save: Event is in the past.");
       return;
     }
-    if (new Date(endDate) < new Date(date)) {
-      debug("❌ End date must be on or after start date.");
+    const {
+      title,
+      date,
+      isRecurring,
+      interval,
+      endDate,
+      id,
+      originDate,
+      tagName,
+    } = newEvent;
+    if (!title) {
+      debug("❌ Title is required.");
       return;
     }
-  }
-
-  let newEvents = [];
-
-  if (selectedEventId !== null) {
-    if (editMode === "future" && originDate) {
-      const updateTargets = events.filter(
-        (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
-      );
-      newEvents = updateTargets.map((e) => ({
-        ...newEvent,
-        id: e.id,
-        date: e.date,
-        createdBy: e.createdBy,
-        createdAt: e.createdAt,
-        channelId: channelId, // <<<< PATCH HERE
-      }));
-    } else {
-      newEvents = [
-        {
+    if (isRecurring) {
+      if (!endDate) {
+        debug("❌ End date is required for recurring events.");
+        return;
+      }
+      if (!interval || interval < 1) {
+        debug("❌ Interval must be at least 1 day for recurring events.");
+        return;
+      }
+      if (new Date(endDate) < new Date(date)) {
+        debug("❌ End date must be on or after start date.");
+        return;
+      }
+    }
+    let newEvents = [];
+    if (selectedEventId !== null) {
+      if (editMode === "future" && originDate) {
+        const updateTargets = events.filter(
+          (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
+        );
+        newEvents = updateTargets.map((e) => ({
           ...newEvent,
-          originDate: isRecurring ? newEvent.originDate || date : "",
-          isRecurring,
-          interval: isRecurring ? interval : 0,
-          endDate: isRecurring ? endDate : "",
-          channelId: channelId, // <<<< PATCH HERE
-        },
-      ];
-    }
-  } else {
-    if (isRecurring && endDate) {
-      let start = new Date(date);
-      const end = new Date(endDate);
-      const createdAt = new Date().toISOString();
-
-      while (start <= end) {
-        newEvents.push({
-          ...newEvent,
-          id: uuidv4(),
-          date: start.toISOString().split("T")[0],
-          originDate: date,
-          isRecurring: true,
-          interval: parseInt(interval),
-          endDate,
-          createdBy: user?.displayName || "Unknown",
-          createdAt,
-          tagName,
-          channelId: channelId, // <<<< PATCH HERE
-        });
-        start.setDate(start.getDate() + parseInt(interval));
+          id: e.id,
+          date: e.date,
+          createdBy: e.createdBy,
+          createdAt: e.createdAt,
+          channelId: channelId,
+        }));
+      } else {
+        newEvents = [
+          {
+            ...newEvent,
+            originDate: isRecurring ? newEvent.originDate || date : "",
+            isRecurring,
+            interval: isRecurring ? interval : 0,
+            endDate: isRecurring ? endDate : "",
+            channelId: channelId,
+          },
+        ];
       }
     } else {
-      newEvents = [
-        {
-          ...newEvent,
-          id: uuidv4(),
-          createdBy: user?.displayName || "Unknown",
-          createdAt: new Date().toISOString(),
-          originDate: "",
-          channelId: channelId, // <<<< PATCH HERE
-        },
-      ];
+      if (isRecurring && endDate) {
+        let start = new Date(date);
+        const end = new Date(endDate);
+        const createdAt = new Date().toISOString();
+        while (start <= end) {
+          newEvents.push({
+            ...newEvent,
+            id: uuidv4(),
+            date: start.toISOString().split("T")[0],
+            originDate: date,
+            isRecurring: true,
+            interval: parseInt(interval),
+            endDate,
+            createdBy: user?.displayName || "Unknown",
+            createdAt,
+            tagName,
+            channelId: channelId,
+          });
+          start.setDate(start.getDate() + parseInt(interval));
+        }
+      } else {
+        newEvents = [
+          {
+            ...newEvent,
+            id: uuidv4(),
+            createdBy: user?.displayName || "Unknown",
+            createdAt: new Date().toISOString(),
+            originDate: "",
+            channelId: channelId,
+          },
+        ];
+      }
     }
-  }
-
-  try {
-    await Promise.all(newEvents.map((evt) => saveEventToFirestore(evt)));
-    debug("✅ Events saved to Firestore");
-  } catch (err) {
-    debug("❌ Firestore save error: " + err.message);
-  }
-
-  setShowModal(false);
-  setNewEvent({
-    id: null,
-    title: "",
-    notes: "",
-    date: "",
-    isRecurring: false,
-    interval: 7,
-    endDate: "",
-    color: "#f97316",
-    createdBy: "",
-    createdAt: "",
-    originDate: "",
-    tagName: null,
-    channelId: channelId, // <<<< PATCH HERE (optional, for next create)
-  });
-  setSelectedEventId(null);
-  setEditMode("single");
-  setIsPastEvent(false);
-};
-
-
-  const requestDeleteEvent = () => {
+    try {
+      await Promise.all(newEvents.map((evt) => saveEventToFirestore(evt)));
+      debug("✅ Events saved to Firestore");
+    } catch (err) {
+      debug("❌ Firestore save error: " + err.message);
+    }
+    setShowModal(false);
+    setNewEvent({
+      id: null,
+      title: "",
+      notes: "",
+      date: "",
+      isRecurring: false,
+      interval: 7,
+      endDate: "",
+      color: "#f97316",
+      createdBy: "",
+      createdAt: "",
+      originDate: "",
+      tagName: null,
+      channelId: null,
+    });
+    setSelectedEventId(null);
+    setEditMode("single");
+    setIsPastEvent(false);
+  };
+    const requestDeleteEvent = () => {
     if (isPastEvent) {
       debug("❌ Cannot delete: Event is in the past.");
       return;
@@ -549,7 +504,6 @@ const App = () => {
     const batchDeletes = events
       .filter((e) => e.originDate === eventToDelete.originDate)
       .map((e) => deleteDoc(doc(db, "events", e.id)));
-
     try {
       await Promise.all(batchDeletes);
       debug("Series deleted from Firestore");
@@ -561,6 +515,30 @@ const App = () => {
     }
   };
 
+  // Calendar event mapping
+  const calendarEvents = useMemo(() => {
+    const mapped = events
+      .filter((evt) => !!evt.date && !!evt.title)
+      .map((evt) => {
+        const tag = tags.find((t) => t.name === evt.tagName);
+        return {
+          id: evt.id,
+          title: evt.title,
+          start: evt.date,
+          color: tag ? tag.color : evt.color,
+          extendedProps: {
+            notes: evt.notes,
+            createdBy: evt.createdBy,
+            tagName: tag ? tag.name : null,
+            tagColor: tag ? tag.color : null,
+          },
+        };
+      });
+    debug("🗓️ calendarEvents mapped for FullCalendar:", mapped);
+    return mapped;
+  }, [events, tags]);
+
+  // --- UI render ---
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
       <h2
@@ -587,7 +565,7 @@ const App = () => {
 
       <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} />
+        <TagManager tags={tags} setTags={setTags} channelId={channelId} />
       </div>
 
       {authDebug.length > 0 && (
@@ -876,37 +854,132 @@ const App = () => {
         )}
 
         <FullCalendar
-  key={eventsKey}
-  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-  headerToolbar={{
-    start: "dayGridMonth,timeGridWeek,timeGridDay",
-    center: "title",
-    end: "prev,next today",
-  }}
-  initialView="dayGridMonth"
-  initialDate={new Date().toISOString().split("T")[0]}
-  dateClick={handleDateClick}
-  eventClick={handleEventClick}
-  events={calendarEvents}
-  dayCellClassNames={arg => {
-    const date = arg.date;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today ? ["past-date-cell"] : [];
-  }}
-  eventDidMount={info => {
-    const eventDate = new Date(info.event.start);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (eventDate < today) {
-      info.el.classList.add("past-event");
-    }
-  }}
+          key={eventsKey}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          headerToolbar={{
+            start: "dayGridMonth,timeGridWeek,timeGridDay",
+            center: "title",
+            end: "prev,next today",
+          }}
+          initialView="dayGridMonth"
+          dateClick={handleDateClick}
+          eventClick={handleEventClick}
+          dayCellClassNames={(arg) => {
+            const date = arg.date;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (date < today) return ["past-date-cell"];
+            return [];
+          }}
+          events={calendarEvents}
+          eventContent={(arg) => {
+            const tagColor = arg.event.extendedProps.tagColor || "#f97316";
+            const rgb = hexToRgb(tagColor);
+            return (
+              <div
+                style={{
+                  width: "100%",
+                  padding: "6px 12px",
+                  borderRadius: 30,
+                  background: `linear-gradient(90deg, rgba(${rgb}, 0) 0%, ${tagColor} 100%)`,
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  userSelect: "none",
+                  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  textAlign: "center",
+                  cursor: "pointer",
+                }}
+                title={arg.event.title}
+              >
+                {arg.event.title}
+              </div>
+            );
+          }}
+          eventDidMount={(info) => {
+            if (info.el._tooltip) {
+              document.body.removeChild(info.el._tooltip);
+              info.el._tooltip = null;
+            }
+            const { notes, createdBy, tagName, tagColor } = info.event.extendedProps;
+            const color = tagColor || "#f97316";
+            const title = info.event.title;
+            const tooltip = document.createElement("div");
+            tooltip.className = "tooltip-custom";
+            tooltip.innerHTML = `
+              <strong style="color:#f97316; font-weight:700; font-size:16px;">${title}</strong><br/>
+              ${
+                tagName
+                  ? `<span style="
+                      display:inline-block;
+                      padding:2px 8px;
+                      border-radius:12px;
+                      background: linear-gradient(to right, rgba(${hexToRgb(
+                        color
+                      )}, 0) 0%, ${color} 100%);
+                      color: #fff;
+                      font-weight: 600;
+                      font-size: 12px;
+                      margin: 4px 0;
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                      text-shadow: 0 0 2px rgba(0,0,0,0.6);
+                    ">🏷️ ${tagName}</span><br/>`
+                  : ""
+              }
+              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${
+                notes || "No notes"
+              }</div>
+              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${
+                createdBy || "Unknown"
+              }</div>
+            `;
+            document.body.appendChild(tooltip);
+            info.el._tooltip = tooltip;
+            info.el.addEventListener("mouseenter", (e) => {
+              tooltip.style.opacity = "1";
+              tooltip.style.display = "block";
+              tooltip.style.left = e.pageX + 12 + "px";
+              tooltip.style.top = e.pageY + 12 + "px";
+            });
+            info.el.addEventListener("mousemove", (e) => {
+              tooltip.style.left = e.pageX + 12 + "px";
+              tooltip.style.top = e.pageY + 12 + "px";
+});
+info.el.addEventListener("mouseleave", () => {
+tooltip.style.opacity = "0";
+setTimeout(() => {
+tooltip.style.display = "none";
+}, 250);
+});
+info.el.addEventListener("click", () => {
+tooltip.style.opacity = "0";
+setTimeout(() => {
+tooltip.style.display = "none";
+}, 250);
+});
+const eventDate = new Date(info.event.start);
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+if (eventDate < today) {
+info.el.style.opacity = "0.4";
+info.el.style.pointerEvents = "none";
+info.el.style.userSelect = "none";
+info.el.style.cursor = "not-allowed";
+} else {
+info.el.style.opacity = "";
+info.el.style.pointerEvents = "";
+info.el.style.userSelect = "";
+info.el.style.cursor = "";
+}
+}}
 />
-
-      </div>
-    </div>
-  );
+</div>
+</div>
+);
 };
 
 export default App;
