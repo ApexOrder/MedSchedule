@@ -12,10 +12,9 @@ import {
   orderBy,
   onSnapshot,
   addDoc,
-  updateDoc,
+  setDoc,
   deleteDoc,
   doc,
-  setDoc,
   where,
 } from "firebase/firestore";
 import { db } from "./firebase.js";
@@ -159,6 +158,8 @@ const App = () => {
     channelId: null,
   });
 
+  const debug = (msg) => setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
+
   // Utility to check past date
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -167,14 +168,10 @@ const App = () => {
     return eventDate < today;
   };
 
-  // DEBUGGING HELPERS
-  const debug = (msg) => setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
-
   // Microsoft Teams SDK + channel context detection
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
-
     app
       .initialize()
       .then(() => {
@@ -184,13 +181,9 @@ const App = () => {
       .then((context) => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
-
-        // Channel detection (classic Teams + new Teams fallback)
         const chId = context.channelId || (context.channel && context.channel.id) || null;
         debug("ChannelId detected: " + chId);
-
         setChannelId(chId);
-
         authentication.getAuthToken({
           successCallback: (token) => {
             debug("✅ Auth token acquired.");
@@ -200,7 +193,6 @@ const App = () => {
             } catch (e) {
               debug("❌ Failed to decode token: " + e.message);
             }
-
             fetch("/api/getUser", {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -228,34 +220,37 @@ const App = () => {
 
   // Firestore events/tags subscriptions filtered by channelId
   useEffect(() => {
-    if (!channelId) return; // Don't subscribe until channel is detected
-
+    debug("FIRESTORE EFFECT - channelId: " + channelId);
+    if (!channelId) {
+      debug("Waiting for channelId before setting up Firestore subscription.");
+      setEvents([]);
+      setTags([]);
+      return;
+    }
     let eventsQuery = query(
-  collection(db, "events"),
-  where("channelId", "==", channelId),
-  orderBy("date", "asc")
-);
-
+      collection(db, "events"),
+      where("channelId", "==", channelId),
+      orderBy("date", "asc")
+    );
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
       debug("📦 Firestore events snapshot: ");
       debug(eventsData);
     });
-
     let tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
       const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setTags(tagsData);
     });
-
     return () => {
       unsubscribeEvents();
       unsubscribeTags();
     };
+    // eslint-disable-next-line
   }, [channelId]);
 
-  // Memoized calendarEvents so we can debug what's being rendered
+  // Memoized calendarEvents
   const calendarEvents = useMemo(() => {
     const mapped = events
       .filter((evt) => !!evt.date && !!evt.title)
@@ -274,7 +269,6 @@ const App = () => {
           },
         };
       });
-    // DEBUG output for mapped events
     debug("🗓️ calendarEvents mapped for FullCalendar:");
     debug(mapped);
     return mapped;
@@ -286,6 +280,11 @@ const App = () => {
     if (isPastDate(info.dateStr)) {
       alert("⚠️ Cannot create events on past dates.");
       debug(`Blocked create on past date ${info.dateStr}`);
+      return;
+    }
+    if (!channelId) {
+      debug("❌ Cannot create event: channelId not set!");
+      alert("Waiting for Teams channel. Please try again in a moment.");
       return;
     }
     debug("📅 Date clicked: " + info.dateStr);
@@ -330,6 +329,10 @@ const App = () => {
 
   // Firestore update/add helpers
   const saveEventToFirestore = async (event) => {
+    if (!event.channelId) {
+      debug("❌ Refusing to save: missing channelId");
+      return;
+    }
     if (event.id) {
       const eventRef = doc(db, "events", event.id);
       await setDoc(eventRef, event, { merge: true });
@@ -340,6 +343,11 @@ const App = () => {
   };
 
   const handleSaveEvent = async () => {
+    if (!channelId) {
+      debug("❌ Cannot save: channelId is not set!");
+      alert("Teams channel not ready yet. Please wait a moment and try again.");
+      return;
+    }
     if (isPastEvent) {
       debug("❌ Cannot save: Event is in the past.");
       return;
@@ -354,7 +362,6 @@ const App = () => {
       id,
       originDate,
       tagName,
-      channelId: eventChannelId,
     } = newEvent;
 
     if (!title) {
@@ -380,9 +387,7 @@ const App = () => {
     let newEvents = [];
 
     if (selectedEventId !== null) {
-      // Editing: only update the current event or future series if selected
       if (editMode === "future" && originDate) {
-        // Find all events with the same originDate >= current date and update them
         const updateTargets = events.filter(
           (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
         );
@@ -392,10 +397,9 @@ const App = () => {
           date: e.date,
           createdBy: e.createdBy,
           createdAt: e.createdAt,
-          channelId: eventChannelId,
+          channelId: channelId,
         }));
       } else {
-        // Just update this event
         newEvents = [
           {
             ...newEvent,
@@ -403,12 +407,11 @@ const App = () => {
             isRecurring,
             interval: isRecurring ? interval : 0,
             endDate: isRecurring ? endDate : "",
-            channelId: eventChannelId,
+            channelId: channelId,
           },
         ];
       }
     } else {
-      // Creating new event(s)
       if (isRecurring && endDate) {
         let start = new Date(date);
         const end = new Date(endDate);
@@ -426,7 +429,7 @@ const App = () => {
             createdBy: user?.displayName || "Unknown",
             createdAt,
             tagName,
-            channelId: eventChannelId,
+            channelId: channelId,
           });
           start.setDate(start.getDate() + parseInt(interval));
         }
@@ -438,7 +441,7 @@ const App = () => {
             createdBy: user?.displayName || "Unknown",
             createdAt: new Date().toISOString(),
             originDate: "",
-            channelId: eventChannelId,
+            channelId: channelId,
           },
         ];
       }
@@ -465,7 +468,7 @@ const App = () => {
       createdAt: "",
       originDate: "",
       tagName: null,
-      channelId: eventChannelId,
+      channelId: channelId,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -536,7 +539,6 @@ const App = () => {
       return;
     }
     debug(`🗑️ Deleting series with originDate: ${eventToDelete.originDate}`);
-
     const batchDeletes = events
       .filter((e) => e.originDate === eventToDelete.originDate)
       .map((e) => deleteDoc(doc(db, "events", e.id)));
@@ -655,199 +657,179 @@ const App = () => {
       )}
 
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
-        {showModal && (
-          <div
-            className="modal-fade"
-            style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              background: "#2d2d2d",
-              padding: 20,
-              borderRadius: 8,
-              zIndex: 9999,
-              width: 400,
-              boxShadow: "0 0 10px rgba(0,0,0,0.5)",
-              transformOrigin: "center center",
-            }}
-          >
-            <h3 style={{ color: "#fff", marginBottom: 4 }}>
-              {selectedEventId !== null ? "Edit Event" : "New Event"}
-            </h3>
-
-            {selectedEventId !== null && newEvent.createdAt && (
-              <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
-                Created: {new Date(newEvent.createdAt).toLocaleString()} <br />
-                Created by: {newEvent.createdBy || "Unknown"}
-              </div>
-            )}
-
-            <input
-              type="text"
-              placeholder="Title"
-              value={newEvent.title}
-              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-              style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
-            />
-
-            {selectedEventId !== null && newEvent.isRecurring && (
-              <div style={{ marginBottom: 10, color: "#fff" }}>
-                <label style={{ marginRight: 12 }}>
-                  <input
-                    type="radio"
-                    name="editMode"
-                    value="single"
-                    checked={editMode === "single"}
-                    onChange={() => setEditMode("single")}
-                  />{" "}
-                  Edit this event only
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="editMode"
-                    value="future"
-                    checked={editMode === "future"}
-                    onChange={() => setEditMode("future")}
-                  />{" "}
-                  Edit this and future events
-                </label>
-              </div>
-            )}
-
-            <textarea
-              placeholder="Notes"
-              value={newEvent.notes}
-              onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
-              style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
-            />
-
-            <label
+        {channelId ? (
+          showModal && (
+            <div
+              className="modal-fade"
               style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: 10,
-                gap: 8,
-                color: "#fff",
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                background: "#2d2d2d",
+                padding: 20,
+                borderRadius: 8,
+                zIndex: 9999,
+                width: 400,
+                boxShadow: "0 0 10px rgba(0,0,0,0.5)",
+                transformOrigin: "center center",
               }}
             >
+              <h3 style={{ color: "#fff", marginBottom: 4 }}>
+                {selectedEventId !== null ? "Edit Event" : "New Event"}
+              </h3>
+
+              {selectedEventId !== null && newEvent.createdAt && (
+                <div style={{ color: "#aaa", fontSize: 12, marginBottom: 10 }}>
+                  Created: {new Date(newEvent.createdAt).toLocaleString()} <br />
+                  Created by: {newEvent.createdBy || "Unknown"}
+                </div>
+              )}
+
               <input
-                type="checkbox"
-                checked={newEvent.isRecurring}
-                onChange={(e) => setNewEvent({ ...newEvent, isRecurring: e.target.checked })}
+                type="text"
+                placeholder="Title"
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
               />
-              <span>Recurring event</span>
-            </label>
 
-            {newEvent.isRecurring && (
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
-                  Interval (days):
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={newEvent.interval}
-                  onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
-                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
-                />
+              {selectedEventId !== null && newEvent.isRecurring && (
+                <div style={{ marginBottom: 10, color: "#fff" }}>
+                  <label style={{ marginRight: 12 }}>
+                    <input
+                      type="radio"
+                      name="editMode"
+                      value="single"
+                      checked={editMode === "single"}
+                      onChange={() => setEditMode("single")}
+                    />{" "}
+                    Edit this event only
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="editMode"
+                      value="future"
+                      checked={editMode === "future"}
+                      onChange={() => setEditMode("future")}
+                    />{" "}
+                    Edit this and future events
+                  </label>
+                </div>
+              )}
 
-                <label style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}>
-                  End date:
-                </label>
-                <input
-                  type="date"
-                  value={newEvent.endDate}
-                  onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
-                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
-                />
-              </div>
-            )}
+              <textarea
+                placeholder="Notes"
+                value={newEvent.notes}
+                onChange={(e) => setNewEvent({ ...newEvent, notes: e.target.value })}
+                style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
+              />
 
-            <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
-              Event Tag:
-            </label>
-            <select
-              value={newEvent.tagName || ""}
-              onChange={(e) => setNewEvent({ ...newEvent, tagName: e.target.value || null })}
-              style={{ width: "100%", padding: 8, marginBottom: 10, borderRadius: 4, border: "1px solid #555" }}
-            >
-              <option value="">-- None --</option>
-              {tags.map((tag) => (
-                <option key={tag.id} value={tag.name}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
-
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-              <button
-                onClick={handleSaveEvent}
+              <label
                 style={{
-                  background: "#10b981",
-                  padding: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 10,
+                  gap: 8,
                   color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
-                  flex: "1 1 45%",
-                  transition: "filter 0.3s",
-                  cursor: "pointer",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
-                onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
               >
-                Save
-              </button>
+                <input
+                  type="checkbox"
+                  checked={newEvent.isRecurring}
+                  onChange={(e) => setNewEvent({ ...newEvent, isRecurring: e.target.checked })}
+                />
+                <span>Recurring event</span>
+              </label>
 
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  background: "#ef4444",
-                  padding: 10,
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 4,
-                  flex: "1 1 45%",
-                  transition: "filter 0.3s",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
-                onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+              {newEvent.isRecurring && (
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
+                    Interval (days):
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newEvent.interval}
+                    onChange={(e) => setNewEvent({ ...newEvent, interval: Number(e.target.value) })}
+                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
+                  />
+
+                  <label style={{ color: "#fff", display: "block", marginTop: 10, marginBottom: 4 }}>
+                    End date:
+                  </label>
+                  <input
+                    type="date"
+                    value={newEvent.endDate}
+                    onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #555" }}
+                  />
+                </div>
+              )}
+
+              <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
+                Event Tag:
+              </label>
+              <select
+                value={newEvent.tagName || ""}
+                onChange={(e) => setNewEvent({ ...newEvent, tagName: e.target.value || null })}
+                style={{ width: "100%", padding: 8, marginBottom: 10, borderRadius: 4, border: "1px solid #555" }}
               >
-                Cancel
-              </button>
-            </div>
+                <option value="">-- None --</option>
+                {tags.map((tag) => (
+                  <option key={tag.id} value={tag.name}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
 
-            {selectedEventId !== null && (
-              <>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                 <button
-                  className="delete-event"
-                  onClick={requestDeleteEvent}
+                  onClick={handleSaveEvent}
                   style={{
-                    marginTop: 12,
-                    width: "100%",
-                    backgroundColor: "#b91c1c",
+                    background: "#10b981",
+                    padding: 10,
                     color: "#fff",
                     border: "none",
-                    padding: 10,
                     borderRadius: 4,
-                    cursor: "pointer",
+                    flex: "1 1 45%",
                     transition: "filter 0.3s",
+                    cursor: "pointer",
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
                   onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
                 >
-                  Delete Event
+                  Save
                 </button>
 
-                {newEvent.isRecurring && (
+                <button
+                  onClick={() => setShowModal(false)}
+                  style={{
+                    background: "#ef4444",
+                    padding: 10,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    flex: "1 1 45%",
+                    transition: "filter 0.3s",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {selectedEventId !== null && (
+                <>
                   <button
                     className="delete-event"
-                    onClick={requestDeleteSeries}
+                    onClick={requestDeleteEvent}
                     style={{
-                      marginTop: 8,
+                      marginTop: 12,
                       width: "100%",
-                      backgroundColor: "#7f1d1d",
+                      backgroundColor: "#b91c1c",
                       color: "#fff",
                       border: "none",
                       padding: 10,
@@ -858,141 +840,52 @@ const App = () => {
                     onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
                     onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
                   >
-                    Delete Series
+                    Delete Event
                   </button>
-                )}
-              </>
-            )}
+
+                  {newEvent.isRecurring && (
+                    <button
+                      className="delete-event"
+                      onClick={requestDeleteSeries}
+                      style={{
+                        marginTop: 8,
+                        width: "100%",
+                        backgroundColor: "#7f1d1d",
+                        color: "#fff",
+                        border: "none",
+                        padding: 10,
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        transition: "filter 0.3s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
+                    >
+                      Delete Series
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        ) : (
+          <div style={{ color: "#f97316", textAlign: "center", marginTop: 80, fontSize: 22 }}>
+            <span>Waiting for Teams channel info…</span>
           </div>
         )}
-
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          headerToolbar={{
-            start: "dayGridMonth,timeGridWeek,timeGridDay",
-            center: "title",
-            end: "prev,next today",
-          }}
-          initialView="dayGridMonth"
-          dateClick={handleDateClick}
-          eventClick={handleEventClick}
-          dayCellClassNames={(arg) => {
-            const date = arg.date;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (date < today) return ["past-date-cell"];
-            return [];
-          }}
-          events={calendarEvents}
-          eventContent={(arg) => {
-            const tagColor = arg.event.extendedProps.tagColor || "#f97316";
-            const rgb = hexToRgb(tagColor);
-
-            return (
-              <div
-                style={{
-                  width: "100%",
-                  padding: "6px 12px",
-                  borderRadius: 30,
-                  background: `linear-gradient(90deg, rgba(${rgb}, 0) 0%, ${tagColor} 100%)`,
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  userSelect: "none",
-                  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                  textShadow: "0 1px 2px rgba(0,0,0,0.6)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  textAlign: "center",
-                  cursor: "pointer",
-                }}
-                title={arg.event.title}
-              >
-                {arg.event.title}
-              </div>
-            );
-          }}
-          eventDidMount={(info) => {
-            if (info.el._tooltip) {
-              document.body.removeChild(info.el._tooltip);
-              info.el._tooltip = null;
-            }
-
-            const { notes, createdBy, tagName, tagColor } = info.event.extendedProps;
-            const color = tagColor || "#f97316";
-            const title = info.event.title;
-
-            const tooltip = document.createElement("div");
-            tooltip.className = "tooltip-custom";
-            tooltip.innerHTML = `
-              <strong style="color:#f97316; font-weight:700; font-size:16px;">${title}</strong><br/>
-              ${
-                tagName
-                  ? `<span style="
-                      display:inline-block;
-                      padding:2px 8px;
-                      border-radius:12px;
-                      background: linear-gradient(to right, rgba(${hexToRgb(color)}, 0) 0%, ${color} 100%);
-                      color: #fff;
-                      font-weight: 600;
-                      font-size: 12px;
-                      margin: 4px 0;
-                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                      text-shadow: 0 0 2px rgba(0,0,0,0.6);
-                    ">🏷️ ${tagName}</span><br/>`
-                  : ""
-              }
-              <div style="margin-top:8px; font-size:14px; font-weight:400; color:#ddd;">📝 ${notes || "No notes"}</div>
-              <div style="margin-top:6px; font-size:13px; font-weight:400; color:#bbb;">👤 ${createdBy || "Unknown"}</div>
-            `;
-
-            document.body.appendChild(tooltip);
-            info.el._tooltip = tooltip;
-
-            info.el.addEventListener("mouseenter", (e) => {
-              tooltip.style.opacity = "1";
-              tooltip.style.display = "block";
-              tooltip.style.left = e.pageX + 12 + "px";
-              tooltip.style.top = e.pageY + 12 + "px";
-            });
-
-            info.el.addEventListener("mousemove", (e) => {
-              tooltip.style.left = e.pageX + 12 + "px";
-              tooltip.style.top = e.pageY + 12 + "px";
-            });
-
-            info.el.addEventListener("mouseleave", () => {
-              tooltip.style.opacity = "0";
-              setTimeout(() => {
-                tooltip.style.display = "none";
-              }, 250);
-            });
-
-            info.el.addEventListener("click", () => {
-              tooltip.style.opacity = "0";
-              setTimeout(() => {
-                tooltip.style.display = "none";
-              }, 250);
-            });
-
-            const eventDate = new Date(info.event.start);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            if (eventDate < today) {
-              info.el.style.opacity = "0.4";
-              info.el.style.pointerEvents = "none";
-              info.el.style.userSelect = "none";
-              info.el.style.cursor = "not-allowed";
-            } else {
-              info.el.style.opacity = "";
-              info.el.style.pointerEvents = "";
-              info.el.style.userSelect = "";
-              info.el.style.cursor = "";
-            }
-          }}
-        />
+        {channelId && (
+          <FullCalendar
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            headerToolbar={{
+              start: "dayGridMonth,timeGridWeek,timeGridDay",
+              center: "title",
+              end: "prev,next today",
+            }}
+            initialView="dayGridMonth"
+            initialDate={new Date().toISOString().split("T")[0]}
+            events={calendarEvents}
+          />
+        )}
       </div>
     </div>
   );
