@@ -50,18 +50,17 @@ const TagManager = ({ tags, setTags, channelId }) => {
   };
 
   const addTag = async () => {
-    if (!newName.trim() || !channelId) return;
-    const newTag = {
-      id: null,
-      name: newName.trim(),
-      color: newColor,
-      channelId: channelId,
-    };
-    const id = await addTagToFirestore(newTag);
-    newTag.id = id;
-    setTags((prev) => [...prev, newTag]);
-    setNewName("");
+  if (!newName.trim() || !channelId) return;
+  const newTag = {
+    name: newName.trim(),
+    color: newColor,
+    channelId: channelId,
   };
+  await addTagToFirestore(newTag);
+  setNewName("");
+};
+
+
 
   return (
     <div>
@@ -304,14 +303,20 @@ const App = () => {
   };
 
   const saveEventToFirestore = async (event) => {
-    if (event.id) {
-      const eventRef = doc(db, "events", event.id);
-      await setDoc(eventRef, event, { merge: true });
-    } else {
-      const docRef = await addDoc(collection(db, "events"), event);
-      event.id = docRef.id;
-    }
-  };
+  if (event.id) {
+    // Editing existing event
+    const eventRef = doc(db, "events", event.id);
+    // Never save .id field into Firestore
+    const { id, ...eventWithoutId } = event;
+    await setDoc(eventRef, eventWithoutId, { merge: true });
+  } else {
+    // Creating new event: DO NOT include .id property
+    const { id, ...eventWithoutId } = event;
+    await addDoc(collection(db, "events"), eventWithoutId);
+    // No need to update local event.id; the onSnapshot will pick up the doc.id from Firestore
+  }
+};
+
 
   const handleSaveEvent = async () => {
     if (!channelId) {
