@@ -230,7 +230,11 @@ const App = () => {
   useEffect(() => {
     if (!channelId) return; // Don't subscribe until channel is detected
 
-    let eventsQuery = query(collection(db, "events"), where("channelId", "==", channelId), orderBy("date", "asc"));
+    let eventsQuery = query(
+  collection(db, "events"),
+  orderBy("date", "asc")
+);
+
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
