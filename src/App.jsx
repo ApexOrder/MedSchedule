@@ -159,9 +159,16 @@ const App = () => {
     channelId: null,
   });
 
-  const eventsKey = useMemo(() => JSON.stringify(events), [events]);
+  // Utility to check past date
+  const isPastDate = (dateStr) => {
+    const eventDate = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventDate < today;
+  };
 
-  const debug = (msg) => setAuthDebug((prev) => [...prev, msg]);
+  // DEBUGGING HELPERS
+  const debug = (msg) => setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
 
   // Microsoft Teams SDK + channel context detection
   useEffect(() => {
@@ -227,6 +234,8 @@ const App = () => {
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setEvents(eventsData);
+      debug("📦 Firestore events snapshot: ");
+      debug(eventsData);
     });
 
     let tagsQuery = query(collection(db, "tags"), where("channelId", "==", channelId));
@@ -240,13 +249,32 @@ const App = () => {
       unsubscribeTags();
     };
   }, [channelId]);
-  // Utility to check past date
-  const isPastDate = (dateStr) => {
-    const eventDate = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return eventDate < today;
-  };
+
+  // Memoized calendarEvents so we can debug what's being rendered
+  const calendarEvents = useMemo(() => {
+    const mapped = events
+      .filter((evt) => !!evt.date && !!evt.title)
+      .map((evt) => {
+        const tag = tags.find((t) => t.name === evt.tagName);
+        return {
+          id: evt.id,
+          title: evt.title,
+          start: evt.date,
+          color: tag ? tag.color : evt.color || "#f97316",
+          extendedProps: {
+            notes: evt.notes,
+            createdBy: evt.createdBy,
+            tagName: tag ? tag.name : null,
+            tagColor: tag ? tag.color : null,
+          },
+        };
+      });
+    // DEBUG output for mapped events
+    debug("🗓️ calendarEvents mapped for FullCalendar:");
+    debug(mapped);
+    return mapped;
+    // eslint-disable-next-line
+  }, [events, tags]);
 
   // --- Calendar handlers ---
   const handleDateClick = (info) => {
@@ -344,45 +372,45 @@ const App = () => {
       }
     }
 
-    let updatedEvents = [...events];
+    let newEvents = [];
 
     if (selectedEventId !== null) {
+      // Editing: only update the current event or future series if selected
       if (editMode === "future" && originDate) {
-        updatedEvents = updatedEvents.map((e) => {
-          if (e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)) {
-            return {
-              ...newEvent,
-              id: e.id,
-              date: e.date,
-              createdBy: e.createdBy,
-              createdAt: e.createdAt,
-              channelId: eventChannelId,
-            };
-          }
-          return e;
-        });
-      } else {
-        updatedEvents = updatedEvents.map((e) =>
-          e.id === id
-            ? {
-                ...newEvent,
-                originDate: isRecurring ? newEvent.originDate || date : "",
-                isRecurring,
-                interval: isRecurring ? interval : 0,
-                endDate: isRecurring ? endDate : "",
-                channelId: eventChannelId,
-              }
-            : e
+        // Find all events with the same originDate >= current date and update them
+        const updateTargets = events.filter(
+          (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
         );
+        newEvents = updateTargets.map((e) => ({
+          ...newEvent,
+          id: e.id,
+          date: e.date,
+          createdBy: e.createdBy,
+          createdAt: e.createdAt,
+          channelId: eventChannelId,
+        }));
+      } else {
+        // Just update this event
+        newEvents = [
+          {
+            ...newEvent,
+            originDate: isRecurring ? newEvent.originDate || date : "",
+            isRecurring,
+            interval: isRecurring ? interval : 0,
+            endDate: isRecurring ? endDate : "",
+            channelId: eventChannelId,
+          },
+        ];
       }
     } else {
+      // Creating new event(s)
       if (isRecurring && endDate) {
         let start = new Date(date);
         const end = new Date(endDate);
         const createdAt = new Date().toISOString();
 
         while (start <= end) {
-          updatedEvents.push({
+          newEvents.push({
             ...newEvent,
             id: uuidv4(),
             date: start.toISOString().split("T")[0],
@@ -398,19 +426,21 @@ const App = () => {
           start.setDate(start.getDate() + parseInt(interval));
         }
       } else {
-        updatedEvents.push({
-          ...newEvent,
-          id: uuidv4(),
-          createdBy: user?.displayName || "Unknown",
-          createdAt: new Date().toISOString(),
-          originDate: "",
-          channelId: eventChannelId,
-        });
+        newEvents = [
+          {
+            ...newEvent,
+            id: uuidv4(),
+            createdBy: user?.displayName || "Unknown",
+            createdAt: new Date().toISOString(),
+            originDate: "",
+            channelId: eventChannelId,
+          },
+        ];
       }
     }
 
     try {
-      await Promise.all(updatedEvents.map((evt) => saveEventToFirestore(evt)));
+      await Promise.all(newEvents.map((evt) => saveEventToFirestore(evt)));
       debug("✅ Events saved to Firestore");
     } catch (err) {
       debug("❌ Firestore save error: " + err.message);
@@ -516,6 +546,7 @@ const App = () => {
       debug("❌ Firestore series delete error: " + err.message);
     }
   };
+
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
       <h2
@@ -831,7 +862,6 @@ const App = () => {
         )}
 
         <FullCalendar
-          key={eventsKey}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           headerToolbar={{
             start: "dayGridMonth,timeGridWeek,timeGridDay",
@@ -848,21 +878,7 @@ const App = () => {
             if (date < today) return ["past-date-cell"];
             return [];
           }}
-          events={events.map((evt) => {
-            const tag = tags.find((t) => t.name === evt.tagName);
-            return {
-              id: evt.id,
-              title: evt.title,
-              start: evt.date,
-              color: tag ? tag.color : evt.color,
-              extendedProps: {
-                notes: evt.notes,
-                createdBy: evt.createdBy,
-                tagName: tag ? tag.name : null,
-                tagColor: tag ? tag.color : null,
-              },
-            };
-          })}
+          events={calendarEvents}
           eventContent={(arg) => {
             const tagColor = arg.event.extendedProps.tagColor || "#f97316";
             const rgb = hexToRgb(tagColor);
