@@ -831,19 +831,34 @@ const App = () => {
         )}
 
         <FullCalendar
-          key={eventsKey}
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          headerToolbar={{
-            start: "dayGridMonth,timeGridWeek,timeGridDay",
-            center: "title",
-            end: "prev,next today",
-          }}
-          initialView="dayGridMonth"
-          initialDate={new Date().toISOString().split("T")[0]}
-          dateClick={handleDateClick}
-          eventClick={handleEventClick}
-          events={calendarEvents}
-        />
+  key={eventsKey}
+  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+  headerToolbar={{
+    start: "dayGridMonth,timeGridWeek,timeGridDay",
+    center: "title",
+    end: "prev,next today",
+  }}
+  initialView="dayGridMonth"
+  initialDate={new Date().toISOString().split("T")[0]}
+  dateClick={handleDateClick}
+  eventClick={handleEventClick}
+  events={calendarEvents}
+  dayCellClassNames={arg => {
+    const date = arg.date;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today ? ["past-date-cell"] : [];
+  }}
+  eventDidMount={info => {
+    const eventDate = new Date(info.event.start);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (eventDate < today) {
+      info.el.classList.add("past-event");
+    }
+  }}
+/>
+
       </div>
     </div>
   );
