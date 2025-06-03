@@ -213,6 +213,7 @@ const App = () => {
 
   // Firestore events/tags subscriptions (NO channel filter)
   useEffect(() => {
+    debug("Firestore filter - channelId: " + channelId);
     let eventsQuery = query(
   collection(db, "events"),
   where("channelId", "==", channelId),
@@ -221,6 +222,7 @@ const App = () => {
 
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
       const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      debug("Events loaded from Firestore:", eventsData);
       setEvents(eventsData);
       debug("📦 Firestore events snapshot: ");
       debug(eventsData);
