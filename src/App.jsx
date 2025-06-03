@@ -219,15 +219,19 @@ const App = () => {
       return;
     }
     let eventsQuery = query(
-      collection(db, "events"),
-      where("channelId", "==", channelId),
-      orderBy("date", "asc")
-    );
+  collection(db, "events"),
+  where("channelId", "==", channelId),
+  orderBy("date", "asc")
+);
+
     debug("🔍 Firestore events query created with channelId: " + channelId);
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      debug("📦 Firestore events snapshot:", eventsData);
-      setEvents(eventsData);
+      const eventsData = snapshot.docs.map((doc) => ({
+  id: doc.id,
+  ...doc.data(),
+}));
+setEvents(eventsData);
+
     });
     let tagsQuery = query(
       collection(db, "tags"),
