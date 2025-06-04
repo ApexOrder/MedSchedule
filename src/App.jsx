@@ -575,7 +575,7 @@ const App = () => {
             <h3 style={{ color: "#f97316", margin: 0, marginBottom: 16, textAlign: "center" }}>
               Manage Tags
             </h3>
-            <TagManager tags={tags} setTags={setTags} channelId={channelId} />
+            <TagManager tags={tags} setTags={setTags} channelId={channelId} debug={debug} />
           </div>
         </div>
       )}
