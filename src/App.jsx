@@ -13,7 +13,7 @@ import "./App.css";
 const App = () => {
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
   const [events, setEvents] = useState([]);
   const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
