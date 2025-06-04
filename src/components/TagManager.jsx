@@ -11,32 +11,26 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
 
   // Tag add handler
   const handleAddTag = async () => {
-    if (!newName.trim() || !channelId) return;
-    setIsAdding(true);
+  if (!newName.trim() || !channelId) return;
+  setIsAdding(true);
 
-    try {
-      const tag = {
-        name: newName.trim(),
-        color: newColor,
-        channelId: channelId,
-      };
-      debug(`[TagManager] Adding tag: ${JSON.stringify(tag)}`);
-      const docRef = await addDoc(collection(db, "tags"), tag);
+  try {
+    const tag = {
+      name: newName.trim(),
+      color: newColor,
+      channelId: channelId,
+    };
+    debug(`[TagManager] Adding tag: ${JSON.stringify(tag)}`);
+    await addDoc(collection(db, "tags"), tag);
+    debug(`[TagManager] Tag created.`);
+    setNewName("");
+  } catch (err) {
+    debug(`[TagManager] Failed to add tag: ${err.message}`);
+  } finally {
+    setIsAdding(false);
+  }
+};
 
-      // Add new tag to UI state with Firestore doc ID
-      setTags((prev) => [
-        ...prev,
-        { ...tag, id: docRef.id }
-      ]);
-
-      debug(`[TagManager] Tag created: ${docRef.id}`);
-      setNewName("");
-    } catch (err) {
-      debug(`[TagManager] Failed to add tag: ${err.message}`);
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
   // Tag delete handler
   const handleDeleteTag = async (tagId) => {
