@@ -5,6 +5,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import hexToRgb from "../utils/hexToRgb";
 
+
 const CalendarWrapper = ({
   events = [],
   tags = [],
