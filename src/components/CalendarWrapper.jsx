@@ -1,20 +1,25 @@
-import React from "react";
+import React, { useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import hexToRgb from "../utils/hexToRgb";
 
+// debug: function(msg) => void
 const CalendarWrapper = ({
   events,
   tags,
   handleDateClick,
   handleEventClick,
   eventsKey,
+  debug,
 }) => {
-  // Debug: log all incoming events and mapped events
-  console.log("🟩 [CalendarWrapper] Raw events prop:", events);
+  // Send initial debug info to in-app log
+  useEffect(() => {
+    debug("🟩 [CalendarWrapper] Raw events prop:", events);
+  }, [events, debug]);
 
+  // Map and debug events for FullCalendar
   const calendarEvents = events.map((evt, i) => {
     const tag = tags?.find((t) => t.name === evt.tagName);
     const mapped = {
@@ -29,17 +34,18 @@ const CalendarWrapper = ({
         tagColor: tag ? tag.color : null,
       },
     };
-    // Debug: log the mapping process
-    console.log(`[CalendarWrapper] Mapping event #${i}:`, mapped);
+    debug(`[CalendarWrapper] Mapping event #${i}:`, mapped);
     return mapped;
   });
 
-  console.log("🟦 [CalendarWrapper] Final mapped events to FullCalendar:", calendarEvents);
+  useEffect(() => {
+    debug("🟦 [CalendarWrapper] Final mapped events to FullCalendar:", calendarEvents);
+  }, [calendarEvents, debug]);
 
   return (
     <>
-      <div style={{marginBottom: 12}}>
-        <pre style={{color:"#fff", background:"#222", fontSize:12, padding:6, borderRadius:4}}>
+      <div style={{ marginBottom: 12 }}>
+        <pre style={{ color: "#fff", background: "#222", fontSize: 12, padding: 6, borderRadius: 4 }}>
           {JSON.stringify(events, null, 2)}
         </pre>
       </div>
@@ -65,7 +71,6 @@ const CalendarWrapper = ({
         eventContent={(arg) => {
           const tagColor = arg.event.extendedProps.tagColor || "#f97316";
           const rgb = hexToRgb(tagColor);
-
           return (
             <div
               style={{
@@ -90,9 +95,6 @@ const CalendarWrapper = ({
               {arg.event.title}
             </div>
           );
-        }}
-        eventDidMount={(info) => {
-          // You can also add debug logging here if needed
         }}
       />
     </>
