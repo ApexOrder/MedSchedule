@@ -22,7 +22,6 @@ const TagManager = ({ tags, setTags, channelId }) => {
     };
     const id = await addTagToFirestore(newTag);
     newTag.id = id;
-    setTags((prev) => [...prev, newTag]);
     setNewName("");
   };
 
