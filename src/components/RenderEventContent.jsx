@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import hexToRgb from "../utils/hexToRgb";
 
-// Custom renderer for FullCalendar event pills
 function RenderEventContent(arg) {
   const [hovered, setHovered] = useState(false);
+  const pillRef = useRef(null);
 
   const tagColor = arg.event.extendedProps.tagColor || "#3b82f6";
   const pillStyle = {
@@ -29,24 +29,27 @@ function RenderEventContent(arg) {
     boxSizing: "border-box",
     filter: hovered ? "brightness(1.08)" : "none",
     transition: "box-shadow 0.2s, filter 0.2s",
+    position: "relative",
   };
 
-  // Tooltip
-  const tooltip = `
-Title: ${arg.event.title}
-Tag: ${arg.event.extendedProps.tagName || "-"}
-Notes: ${arg.event.extendedProps.notes || "-"}
-Created by: ${arg.event.extendedProps.createdBy || "-"}
-  `.trim();
+  const tooltip = (
+    <div className="calendar-tooltip-bubble">
+      <div><strong>Title:</strong> {arg.event.title}</div>
+      <div><strong>Tag:</strong> {arg.event.extendedProps.tagName || "-"}</div>
+      <div><strong>Notes:</strong> {arg.event.extendedProps.notes || "-"}</div>
+      <div><strong>Creator:</strong> {arg.event.extendedProps.createdBy || "-"}</div>
+    </div>
+  );
 
   return (
     <div
+      ref={pillRef}
       style={pillStyle}
-      title={tooltip}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {arg.event.title}
+      {hovered && tooltip}
     </div>
   );
 }
