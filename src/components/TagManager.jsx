@@ -111,20 +111,23 @@ const TagManager = ({ tags, setTags, channelId }) => {
           >
             {tag.name}
             <button
-              style={{
-                background: "none",
-                border: "none",
-                color: "#fff",
-                marginLeft: 8,
-                cursor: deletingId === tag.id ? "wait" : "pointer",
-                fontSize: 13,
-                opacity: deletingId === tag.id ? 0.4 : 0.7,
-                transition: "opacity 0.14s, color 0.14s",
-              }}
-              title="Delete tag"
-              onClick={() => handleDeleteTag(tag.id)}
-              disabled={deletingId === tag.id}
-            >✕</button>
+  style={{
+    background: "none",
+    border: "none",
+    color: "#fff",
+    marginLeft: 8,
+    cursor: deletingId === tag.id ? "wait" : "pointer",
+    fontSize: 13,
+    opacity: deletingId === tag.id ? 0.4 : 0.7,
+    transition: "opacity 0.14s, color 0.14s",
+  }}
+  title="Delete tag"
+  onClick={() => handleDeleteTag(tag.id)}
+  disabled={deletingId === tag.id}
+>
+  ✕
+</button>
+
           </span>
         ))}
       </div>
