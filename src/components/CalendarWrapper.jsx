@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -13,31 +13,30 @@ const CalendarWrapper = ({
   eventsKey,
   debug = () => {},
 }) => {
-  // Only log when events actually change
+  // Memoize mapping so it only recalculates when events or tags change
+  const calendarEvents = useMemo(() => {
+    return events.map((evt, i) => {
+      const tag = tags?.find((t) => t.name === evt.tagName);
+      return {
+        id: evt.id,
+        title: evt.title,
+        start: evt.date,
+        color: tag ? tag.color : evt.color,
+        extendedProps: {
+          notes: evt.notes,
+          createdBy: evt.createdBy,
+          tagName: tag ? tag.name : null,
+          tagColor: tag ? tag.color : null,
+        },
+      };
+    });
+  }, [events, tags]);
+
+  // Log ONLY when events or tags actually change
   useEffect(() => {
     debug("🟩 [CalendarWrapper] Raw events prop:", events);
-  }, [events, debug]);
-
-  const calendarEvents = events.map((evt, i) => {
-    const tag = tags?.find((t) => t.name === evt.tagName);
-    const mapped = {
-      id: evt.id,
-      title: evt.title,
-      start: evt.date,
-      color: tag ? tag.color : evt.color,
-      extendedProps: {
-        notes: evt.notes,
-        createdBy: evt.createdBy,
-        tagName: tag ? tag.name : null,
-        tagColor: tag ? tag.color : null,
-      },
-    };
-    return mapped;
-  });
-
-  useEffect(() => {
     debug("🟦 [CalendarWrapper] Final mapped events to FullCalendar:", calendarEvents);
-  }, [calendarEvents, debug]);
+  }, [events, tags, calendarEvents, debug]);
 
   return (
     <>
@@ -74,7 +73,6 @@ const CalendarWrapper = ({
         eventContent={(arg) => {
           const tagColor = arg.event.extendedProps.tagColor || "#f97316";
           const rgb = hexToRgb(tagColor);
-
           return (
             <div
               style={{
