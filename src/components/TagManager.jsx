@@ -1,24 +1,104 @@
-import { deleteDoc, doc } from "firebase/firestore";
+import React, { useState } from "react";
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import hexToRgb from "../utils/hexToRgb";
-import React from "react";
 
-const TagManager = ({ tags, setTags, channelId, debug }) => {
+const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState("#3b82f6");
+  const [isAdding, setIsAdding] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
+  // Tag add handler
+  const handleAddTag = async () => {
+    if (!newName.trim() || !channelId) return;
+    setIsAdding(true);
+
+    try {
+      const tag = {
+        name: newName.trim(),
+        color: newColor,
+        channelId: channelId,
+      };
+      debug(`[TagManager] Adding tag: ${JSON.stringify(tag)}`);
+      const docRef = await addDoc(collection(db, "tags"), tag);
+
+      // Add new tag to UI state with Firestore doc ID
+      setTags((prev) => [
+        ...prev,
+        { ...tag, id: docRef.id }
+      ]);
+
+      debug(`[TagManager] Tag created: ${docRef.id}`);
+      setNewName("");
+    } catch (err) {
+      debug(`[TagManager] Failed to add tag: ${err.message}`);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  // Tag delete handler
   const handleDeleteTag = async (tagId) => {
-    debug(`🟠 [TagManager] Attempting to delete tag: ${tagId}`);
+    if (!tagId) {
+      debug(`[TagManager] Attempting to delete tag: null`);
+      return;
+    }
+    debug(`[TagManager] Attempting to delete tag: ${tagId}`);
+    setDeletingId(tagId);
+
     try {
       await deleteDoc(doc(db, "tags", tagId));
-      debug(`🟢 [TagManager] Successfully deleted tag: ${tagId}`);
-      setTags(tags.filter(tag => tag.id !== tagId));
+      setTags((prev) => prev.filter((tag) => tag.id !== tagId));
+      debug(`[TagManager] Tag deleted: ${tagId}`);
     } catch (err) {
       debug(`🔴 [TagManager] Failed to delete tag: ${tagId} | Error: ${err.message}`);
-      alert("Failed to delete tag: " + err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
   return (
     <div>
-      {/* ...Tag adding form... */}
+      {/* Add Tag Form */}
+      <div style={{ marginBottom: 14, display: "flex", gap: 8 }}>
+        <input
+          placeholder="Tag name"
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          style={{
+            padding: "7px 8px",
+            borderRadius: 7,
+            border: "1px solid #555",
+            minWidth: 70,
+            background: "#242436",
+            color: "#fff",
+          }}
+        />
+        <input
+          type="color"
+          value={newColor}
+          onChange={e => setNewColor(e.target.value)}
+          style={{
+            width: 36, height: 32, borderRadius: 8,
+            border: "1px solid #555", background: "#fff", padding: 0
+          }}
+        />
+        <button
+          onClick={handleAddTag}
+          disabled={isAdding}
+          style={{
+            padding: "7px 16px", borderRadius: 7, border: "none",
+            background: "#f97316", color: "#fff", fontWeight: 600,
+            fontSize: 14, cursor: isAdding ? "wait" : "pointer",
+            transition: "filter 0.18s", opacity: isAdding ? 0.6 : 1,
+          }}
+        >
+          Add Tag
+        </button>
+      </div>
+
+      {/* Tag Pills */}
       <div style={{ marginTop: 10 }}>
         {tags.map((tag) => (
           <span
@@ -40,6 +120,8 @@ const TagManager = ({ tags, setTags, channelId, debug }) => {
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
+              opacity: deletingId === tag.id ? 0.5 : 1,
+              cursor: deletingId === tag.id ? "wait" : "default"
             }}
           >
             {tag.name}
@@ -49,9 +131,9 @@ const TagManager = ({ tags, setTags, channelId, debug }) => {
                 border: "none",
                 color: "#fff",
                 marginLeft: 8,
-                cursor: "pointer",
+                cursor: deletingId === tag.id ? "wait" : "pointer",
                 fontSize: 13,
-                opacity: 0.7,
+                opacity: deletingId === tag.id ? 0.4 : 0.7,
                 transition: "opacity 0.14s, color 0.14s",
               }}
               title="Delete tag"
@@ -59,9 +141,8 @@ const TagManager = ({ tags, setTags, channelId, debug }) => {
                 e.stopPropagation();
                 handleDeleteTag(tag.id);
               }}
-            >
-              ✕
-            </button>
+              disabled={deletingId === tag.id}
+            >✕</button>
           </span>
         ))}
       </div>
