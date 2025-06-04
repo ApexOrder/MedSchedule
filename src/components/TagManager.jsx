@@ -116,7 +116,7 @@ const TagManager = ({ tags, setTags, channelId }) => {
     border: "none",
     color: "#fff",
     marginLeft: 8,
-    cursor: deletingId === tag.id ? "wait" : "pointer",
+    cursor: deletingId === tag.id ? "pointer",
     fontSize: 13,
     opacity: deletingId === tag.id ? 0.4 : 0.7,
     transition: "opacity 0.14s, color 0.14s",
