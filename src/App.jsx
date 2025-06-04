@@ -38,9 +38,14 @@ const App = () => {
     channelId: null,
   });
 
-  const eventsKey = useMemo(() => JSON.stringify(events), [events]);
+  // Limit the debug log to 200 entries for sanity
   const debug = (msg) =>
-    setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
+    setAuthDebug((prev) => {
+      const next = [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)];
+      return next.length > 200 ? next.slice(next.length - 200) : next;
+    });
+
+  const eventsKey = useMemo(() => JSON.stringify(events), [events]);
 
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
@@ -91,86 +96,53 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
+  // MAIN Firestore effect
   useEffect(() => {
-  debug("⏳ Firestore effect running. channelId: " + channelId);
+    debug("⏳ Firestore effect running. channelId: " + channelId);
 
-  if (!channelId) {
-    debug("❌ No channelId yet, skipping Firestore subscription.");
-    setEvents([]);
-    setTags([]);
-    return;
-  }
-
-  // Diagnostic: Log *every* event in the database regardless of channel
-  const allEventsQuery = query(collection(db, "events"), orderBy("date", "asc"));
-  const unsubscribeAllEvents = onSnapshot(allEventsQuery, (snapshot) => {
-    const allEventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    debug("🟡 ALL EVENTS in Firestore:");
-    allEventsData.forEach((evt, i) => {
-      debug(
-        `[${i}] title: ${evt.title} | channelId: [${evt.channelId}] (len: ${evt.channelId?.length})`
-      );
-    });
-  });
-
-  // The actual filtered query
-  let eventsQuery = query(
-    collection(db, "events"),
-    where("channelId", "==", channelId),
-    orderBy("date", "asc")
-  );
-  debug(
-    "🔍 Firestore events query created with channelId: [" +
-      channelId +
-      "] (len: " +
-      channelId.length +
-      ")"
-  );
-
-  const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-    const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    debug("📦 Firestore events snapshot:", eventsData);
-
-    if (eventsData.length > 0) {
-      debug(
-        `🟢 First matched event channelId: [${eventsData[0]?.channelId}] (len: ${
-          eventsData[0]?.channelId?.length
-        })`
-      );
-      debug(
-        `🟢 String equality: ${channelId === eventsData[0]?.channelId ? "TRUE" : "FALSE"}`
-      );
-    } else {
-      debug(
-        "🔴 No events matched for this channelId. Double-check for invisible whitespace, typo, or inconsistent channelId usage."
-      );
+    if (!channelId) {
+      debug("❌ No channelId yet, skipping Firestore subscription.");
+      setEvents([]);
+      setTags([]);
+      return;
     }
 
-    setEvents(eventsData);
-    debug("🚦 setEvents will update with: ", eventsData);
+    // EVENTS
+    let eventsQuery = query(
+      collection(db, "events"),
+      where("channelId", "==", channelId),
+      orderBy("date", "asc")
+    );
+    debug("🔍 Firestore events query created with channelId: " + channelId);
 
-  });
+    const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      debug(`📦 [${eventsData.length}] events for channelId: ${channelId}`);
+      if (eventsData.length > 0) {
+        debug("Titles: " + eventsData.map(e => `${e.title} (${e.date})`).join(", "));
+      }
+      setEvents(eventsData);
+    });
 
-  let tagsQuery = query(
-    collection(db, "tags"),
-    where("channelId", "==", channelId)
-  );
-  debug("🔍 Firestore tags query created with channelId: " + channelId);
+    // TAGS
+    let tagsQuery = query(
+      collection(db, "tags"),
+      where("channelId", "==", channelId)
+    );
+    debug("🔍 Firestore tags query created with channelId: " + channelId);
 
-  const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
-    const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    debug("🏷️ Firestore tags snapshot:", tagsData);
-    setTags(tagsData);
-  });
+    const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
+      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      debug(`🏷️ [${tagsData.length}] tags for channelId: ${channelId}`);
+      setTags(tagsData);
+    });
 
-  return () => {
-    debug("🧹 Firestore unsubscribe called for channelId: " + channelId);
-    unsubscribeEvents();
-    unsubscribeTags();
-    unsubscribeAllEvents();
-  };
-}, [channelId]);
-
+    return () => {
+      debug("🧹 Firestore unsubscribe called for channelId: " + channelId);
+      unsubscribeEvents();
+      unsubscribeTags();
+    };
+  }, [channelId]);
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -497,14 +469,13 @@ const App = () => {
       />
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
-  events={events}
-  tags={tags}
-  handleDateClick={handleDateClick}
-  handleEventClick={handleEventClick}
-  eventsKey={eventsKey}
-  debug={debug}
-/>
-
+          events={events}
+          tags={tags}
+          handleDateClick={handleDateClick}
+          handleEventClick={handleEventClick}
+          eventsKey={eventsKey}
+          debug={debug}
+        />
       </div>
     </div>
   );
