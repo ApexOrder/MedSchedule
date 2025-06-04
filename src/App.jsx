@@ -121,6 +121,7 @@ const App = () => {
       if (eventsData.length > 0) {
         debug("Titles: " + eventsData.map(e => `${e.title} (${e.date})`).join(", "));
       }
+      debug("📦 Firestore events snapshot:", eventsData);
       setEvents(eventsData);
     });
 
