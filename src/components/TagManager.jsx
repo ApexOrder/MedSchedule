@@ -7,12 +7,13 @@ const TagManager = ({ tags, setTags, channelId }) => {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
   const [isAdding, setIsAdding] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
-  // Prevent duplicate tags on add
+  // Add new tag (prevent duplicates)
   const handleAddTag = async () => {
     if (!newName.trim() || !channelId) return;
     if (tags.some(tag => tag.name.toLowerCase() === newName.trim().toLowerCase())) {
-      setNewName(""); // Optionally show an error instead
+      setNewName("");
       return;
     }
     setIsAdding(true);
@@ -31,9 +32,17 @@ const TagManager = ({ tags, setTags, channelId }) => {
     setIsAdding(false);
   };
 
+  // Delete tag
   const handleDeleteTag = async (tagId) => {
-    await deleteDoc(doc(db, "tags", tagId));
-    setTags(tags.filter(tag => tag.id !== tagId));
+    if (!tagId) return;
+    setDeletingId(tagId);
+    try {
+      await deleteDoc(doc(db, "tags", tagId));
+      setTags(prev => prev.filter(tag => tag.id !== tagId));
+    } catch (err) {
+      // Optionally handle error
+    }
+    setDeletingId(null);
   };
 
   return (
@@ -97,6 +106,7 @@ const TagManager = ({ tags, setTags, channelId }) => {
               gap: 8,
               letterSpacing: 0.1,
               transition: "box-shadow 0.18s, transform 0.16s",
+              opacity: deletingId === tag.id ? 0.5 : 1,
             }}
           >
             {tag.name}
@@ -106,13 +116,14 @@ const TagManager = ({ tags, setTags, channelId }) => {
                 border: "none",
                 color: "#fff",
                 marginLeft: 8,
-                cursor: "pointer",
+                cursor: deletingId === tag.id ? "wait" : "pointer",
                 fontSize: 13,
-                opacity: 0.7,
+                opacity: deletingId === tag.id ? 0.4 : 0.7,
                 transition: "opacity 0.14s, color 0.14s",
               }}
               title="Delete tag"
               onClick={() => handleDeleteTag(tag.id)}
+              disabled={deletingId === tag.id}
             >✕</button>
           </span>
         ))}
