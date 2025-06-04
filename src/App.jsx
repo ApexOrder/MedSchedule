@@ -13,7 +13,7 @@ import "./App.css";
 const App = () => {
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
-  const [showDebug, setShowDebug] = useState(false); // debug toggle
+  const [showDebug, setShowDebug] = useState(true);
   const [events, setEvents] = useState([]);
   const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -22,6 +22,34 @@ const App = () => {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
   const [channelId, setChannelId] = useState(null);
+
+  // Debug bubble drag state
+  const [debugPosition, setDebugPosition] = useState({ top: 80, right: 25 });
+  const [drag, setDrag] = useState({ dragging: false, offsetX: 0, offsetY: 0 });
+
+  const startDrag = (e) => {
+    setDrag({
+      dragging: true,
+      offsetX: e.clientX - debugPosition.right,
+      offsetY: e.clientY - debugPosition.top,
+    });
+  };
+  const stopDrag = () => setDrag((d) => ({ ...d, dragging: false }));
+  useEffect(() => {
+    if (!drag.dragging) return;
+    const move = (e) => {
+      setDebugPosition({
+        top: e.clientY - drag.offsetY,
+        right: window.innerWidth - e.clientX - 10,
+      });
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", stopDrag);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", stopDrag);
+    };
+  }, [drag.dragging, drag.offsetX, drag.offsetY]);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -41,7 +69,10 @@ const App = () => {
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
   const debug = (msg) =>
-    setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
+    setAuthDebug((prev) => [
+      ...prev,
+      typeof msg === "string" ? msg : JSON.stringify(msg, null, 2),
+    ]);
 
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
@@ -55,7 +86,8 @@ const App = () => {
       .then((context) => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
-        const chId = context.channelId || (context.channel && context.channel.id) || null;
+        const chId =
+          context.channelId || (context.channel && context.channel.id) || null;
         debug("ChannelId detected: " + chId);
         setChannelId(chId);
         authentication.getAuthToken({
@@ -102,22 +134,66 @@ const App = () => {
       return;
     }
 
-    // The actual filtered query.
+    // Diagnostic: Log *every* event in the database regardless of channel
+    const allEventsQuery = query(
+      collection(db, "events"),
+      orderBy("date", "asc")
+    );
+    const unsubscribeAllEvents = onSnapshot(allEventsQuery, (snapshot) => {
+      const allEventsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      debug("🟡 ALL EVENTS in Firestore:");
+      allEventsData.forEach((evt, i) => {
+        debug(
+          `[${i}] title: ${evt.title} | channelId: [${evt.channelId}] (len: ${
+            evt.channelId?.length
+          })`
+        );
+      });
+    });
+
+    // The actual filtered query
     let eventsQuery = query(
       collection(db, "events"),
       where("channelId", "==", channelId),
       orderBy("date", "asc")
     );
     debug(
-      "🔍 Firestore events query created with channelId: " +
-        channelId
+      "🔍 Firestore events query created with channelId: [" +
+        channelId +
+        "] (len: " +
+        channelId.length +
+        ")"
     );
 
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      debug("📦 Firestore events snapshot:");
-      debug(eventsData);
+      const eventsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      debug("📦 Firestore events snapshot:", eventsData);
+
+      if (eventsData.length > 0) {
+        debug(
+          `🟢 First matched event channelId: [${eventsData[0]?.channelId}] (len: ${
+            eventsData[0]?.channelId?.length
+          })`
+        );
+        debug(
+          `🟢 String equality: ${
+            channelId === eventsData[0]?.channelId ? "TRUE" : "FALSE"
+          }`
+        );
+      } else {
+        debug(
+          "🔴 No events matched for this channelId. Double-check for invisible whitespace, typo, or inconsistent channelId usage."
+        );
+      }
+
       setEvents(eventsData);
+      debug("🚦 setEvents will update with: ", eventsData);
     });
 
     let tagsQuery = query(
@@ -127,8 +203,13 @@ const App = () => {
     debug("🔍 Firestore tags query created with channelId: " + channelId);
 
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
-      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      debug(`🏷️ [${tagsData.length}] tags for channelId: ${channelId}`);
+      const tagsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      debug(
+        `🏷️ [${tagsData.length}] tags for channelId: ${channelId}`
+      );
       setTags(tagsData);
     });
 
@@ -136,9 +217,9 @@ const App = () => {
       debug("🧹 Firestore unsubscribe called for channelId: " + channelId);
       unsubscribeEvents();
       unsubscribeTags();
+      unsubscribeAllEvents();
     };
   }, [channelId]);
-
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -249,7 +330,9 @@ const App = () => {
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
         const updateTargets = events.filter(
-          (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
+          (e) =>
+            e.originDate === originDate &&
+            new Date(e.date) >= new Date(newEvent.date)
         );
         newEvents = updateTargets.map((e) => ({
           ...newEvent,
@@ -414,61 +497,151 @@ const App = () => {
   // ------- RENDER -------
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
-      {/* Debug toggle button, always visible */}
-      <div style={{ position: "fixed", top: 15, right: 15, zIndex: 999 }}>
+      {/* DEBUG TOGGLE & BUBBLE */}
+      <div
+        style={{
+          position: "fixed",
+          top: 20,
+          right: 24,
+          zIndex: 1001,
+          userSelect: "none",
+        }}
+      >
         <button
           onClick={() => setShowDebug((prev) => !prev)}
           style={{
-            background: showDebug ? "#f97316" : "#333",
+            background: showDebug
+              ? "linear-gradient(135deg, #f97316 60%, #ea4c89 100%)"
+              : "rgba(35,35,40,0.85)",
             color: "#fff",
             border: "none",
             borderRadius: "50%",
-            width: 38,
-            height: 38,
+            width: 46,
+            height: 46,
             fontWeight: "bold",
-            fontSize: 20,
+            fontSize: 24,
             cursor: "pointer",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            transition: "background 0.2s",
+            boxShadow: showDebug
+              ? "0 0 24px #f9731666, 0 4px 16px #0008"
+              : "0 2px 8px #0009",
+            transition: "all 0.2s cubic-bezier(.44,2,.31,.98)",
+            outline: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            filter: showDebug ? "brightness(1.1)" : "none",
           }}
           title={showDebug ? "Hide Debug Log" : "Show Debug Log"}
         >
           {showDebug ? "✕" : "🐞"}
         </button>
       </div>
-      {/* Floating debug log bubble */}
-      {showDebug && authDebug.length > 0 && (
+      {showDebug && (
         <div
           style={{
-            background: "#3a3a3a",
-            padding: 10,
-            borderRadius: 8,
-            fontSize: 12,
-            fontFamily: "monospace",
             position: "fixed",
-            top: 65,
-            right: 15,
-            zIndex: 999,
-            minWidth: 340,
-            maxHeight: 350,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            top: debugPosition.top,
+            right: debugPosition.right,
+            zIndex: 1000,
+            background: "rgba(36,38,50, 0.82)",
+            boxShadow: "0 8px 36px 0 #0007, 0 1.5px 6px #f9731620",
+            borderRadius: 18,
+            padding: 18,
+            minWidth: 350,
+            maxWidth: 430,
+            maxHeight: 420,
             overflowY: "auto",
+            color: "#fff",
+            fontFamily: "JetBrains Mono, Fira Mono, monospace",
+            fontSize: 13,
+            backdropFilter: "blur(12px) saturate(1.2)",
+            border: "1.5px solid #f9731633",
+            transition: "opacity .15s cubic-bezier(.68,-0.6,.32,1.6)",
+            opacity: showDebug ? 1 : 0,
+            userSelect: "text",
+            cursor: drag.dragging ? "grabbing" : "grab",
           }}
+          onMouseDown={startDrag}
         >
-          <strong>🔧 Auth Debug Log:</strong>
-          <pre style={{ whiteSpace: "pre-wrap", marginTop: 5 }}>{authDebug.join("\n")}</pre>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 7 }}>
+            <span
+              style={{
+                color: "#f97316",
+                fontWeight: "bold",
+                fontSize: 18,
+                marginRight: 10,
+                letterSpacing: "1.5px",
+              }}
+            >
+              🐞 Debug Log
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDebug(false);
+              }}
+              style={{
+                marginLeft: "auto",
+                background: "none",
+                color: "#fff",
+                border: "none",
+                fontWeight: "bold",
+                fontSize: 18,
+                cursor: "pointer",
+                opacity: 0.66,
+                transition: "opacity 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.66")}
+              title="Close Debug"
+            >
+              ✕
+            </button>
+          </div>
+          <pre
+            style={{
+              whiteSpace: "pre-wrap",
+              marginTop: 0,
+              marginBottom: 0,
+              color: "#fff",
+              fontSize: 13,
+              lineHeight: 1.6,
+            }}
+          >
+            {authDebug.join("\n")}
+          </pre>
         </div>
       )}
 
-      <h2 style={{ color: "#f97316", fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 }}>
+      {/* MAIN APP */}
+      <h2
+        style={{
+          color: "#f97316",
+          fontSize: 24,
+          fontWeight: "bold",
+          textAlign: "center",
+          marginBottom: 20,
+        }}
+      >
         Care Calendar
       </h2>
       <div style={{ background: "#2d2d2d", padding: 12, borderRadius: 6, marginBottom: 10 }}>
         {user ? (
-          <>👤 <strong>{user.displayName}</strong> ({user.email})</>
-        ) : (<>🔄 Authenticating…</>)}
+          <>
+            👤 <strong>{user.displayName}</strong> ({user.email})
+          </>
+        ) : (
+          <>🔄 Authenticating…</>
+        )}
       </div>
-      <div style={{ marginBottom: 20, padding: 12, background: "#2d2d2d", borderRadius: 6 }}>
+      <div
+        style={{
+          marginBottom: 20,
+          padding: 12,
+          background: "#2d2d2d",
+          borderRadius: 6,
+        }}
+      >
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
         <TagManager tags={tags} setTags={setTags} channelId={channelId} />
       </div>
