@@ -12,7 +12,7 @@ const CalendarWrapper = ({
   handleDateClick,
   handleEventClick,
   eventsKey,
-  debug,
+  debug = () => {},
 }) => {
   // Send initial debug info to in-app log
   useEffect(() => {
