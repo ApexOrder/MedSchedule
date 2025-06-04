@@ -5,21 +5,19 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import hexToRgb from "../utils/hexToRgb";
 
-// debug: function(msg) => void
 const CalendarWrapper = ({
-  events,
-  tags,
+  events = [],
+  tags = [],
   handleDateClick,
   handleEventClick,
   eventsKey,
   debug = () => {},
 }) => {
-  // Send initial debug info to in-app log
+  // Only log when events actually change
   useEffect(() => {
     debug("🟩 [CalendarWrapper] Raw events prop:", events);
   }, [events, debug]);
 
-  // Map and debug events for FullCalendar
   const calendarEvents = events.map((evt, i) => {
     const tag = tags?.find((t) => t.name === evt.tagName);
     const mapped = {
@@ -34,7 +32,6 @@ const CalendarWrapper = ({
         tagColor: tag ? tag.color : null,
       },
     };
-    debug(`[CalendarWrapper] Mapping event #${i}:`, mapped);
     return mapped;
   });
 
@@ -44,10 +41,16 @@ const CalendarWrapper = ({
 
   return (
     <>
-      <div style={{ marginBottom: 12 }}>
-        <pre style={{ color: "#fff", background: "#222", fontSize: 12, padding: 6, borderRadius: 4 }}>
-          {JSON.stringify(events, null, 2)}
-        </pre>
+      <div style={{
+        color: "#fff",
+        background: "#222",
+        fontSize: 12,
+        padding: 6,
+        borderRadius: 4,
+        marginBottom: 12
+      }}>
+        <strong>events:</strong>
+        <pre>{JSON.stringify(events, null, 2)}</pre>
       </div>
       <FullCalendar
         key={eventsKey}
@@ -71,6 +74,7 @@ const CalendarWrapper = ({
         eventContent={(arg) => {
           const tagColor = arg.event.extendedProps.tagColor || "#f97316";
           const rgb = hexToRgb(tagColor);
+
           return (
             <div
               style={{
