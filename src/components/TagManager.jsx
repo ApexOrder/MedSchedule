@@ -34,16 +34,16 @@ const TagManager = ({ tags, setTags, channelId }) => {
 
   // Delete tag
   const handleDeleteTag = async (tagId) => {
-    if (!tagId) return;
-    setDeletingId(tagId);
-    try {
-      await deleteDoc(doc(db, "tags", tagId));
-      setTags(prev => prev.filter(tag => tag.id !== tagId));
-    } catch (err) {
-      // Optionally handle error
-    }
-    setDeletingId(null);
-  };
+  setDeletingId(tagId);
+  try {
+    await deleteDoc(doc(db, "tags", tagId));
+    setTags(prev => prev.filter(tag => tag.id !== tagId));
+  } catch (e) {
+    // Optionally show an error
+    alert("Failed to delete tag: " + e.message);
+  }
+  setDeletingId(null); // <--- this is crucial!
+};
 
   return (
     <div>
