@@ -1,25 +1,23 @@
-import React, { useState } from "react";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../firebase";
 import hexToRgb from "../utils/hexToRgb";
+import React from "react";
 
 const TagManager = ({ tags, setTags, channelId }) => {
-  const [deletingId, setDeletingId] = useState(null);
+  // Remove loading/deleting state for simplicity
 
   const handleDeleteTag = async (tagId) => {
-    setDeletingId(tagId);
     try {
       await deleteDoc(doc(db, "tags", tagId));
-      setTags(prev => prev.filter(tag => tag.id !== tagId));
-    } catch (e) {
-      alert("Failed to delete tag: " + e.message);
+      setTags(tags.filter(tag => tag.id !== tagId));
+    } catch (err) {
+      alert("Failed to delete tag: " + err.message);
     }
-    setDeletingId(null);
   };
 
   return (
     <div>
-      {/* ... Add Tag Form ... */}
+      {/* ... Tag adding form ... */}
       <div style={{ marginTop: 10 }}>
         {tags.map((tag) => (
           <span
@@ -45,22 +43,21 @@ const TagManager = ({ tags, setTags, channelId }) => {
           >
             {tag.name}
             <button
-  style={{
-    background: "none",
-    border: "none",
-    color: "#fff",
-    marginLeft: 8,
-    cursor: "pointer",
-    fontSize: 13,
-    opacity: 0.7,
-    transition: "opacity 0.14s, color 0.14s",
-  }}
-  title="Delete tag"
-  onClick={() => handleDeleteTag(tag.id)}
->
-  ✕
-</button>
-
+              style={{
+                background: "none",
+                border: "none",
+                color: "#fff",
+                marginLeft: 8,
+                cursor: "pointer",
+                fontSize: 13,
+                opacity: 0.7,
+                transition: "opacity 0.14s, color 0.14s",
+              }}
+              title="Delete tag"
+              onClick={() => handleDeleteTag(tag.id)}
+            >
+              ✕
+            </button>
           </span>
         ))}
       </div>
