@@ -147,6 +147,8 @@ const App = () => {
     }
 
     setEvents(eventsData);
+    debug("🚦 setEvents will update with: ", eventsData);
+
   });
 
   let tagsQuery = query(
