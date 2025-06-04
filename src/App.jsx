@@ -497,12 +497,14 @@ const App = () => {
       />
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
-          events={events}
-          tags={tags}
-          handleDateClick={handleDateClick}
-          handleEventClick={handleEventClick}
-          eventsKey={eventsKey}
-        />
+  events={events}
+  tags={tags}
+  handleDateClick={handleDateClick}
+  handleEventClick={handleEventClick}
+  eventsKey={eventsKey}
+  debug={debug}
+/>
+
       </div>
     </div>
   );
