@@ -3,8 +3,39 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import hexToRgb from "../utils/hexToRgb";
 
-// Utility: Helper to format the event as needed for FullCalendar
+
+function renderEventContent(arg) {
+  const { event } = arg;
+  const tagName = event.extendedProps.tagName;
+  const tagColor = event.extendedProps.tagColor || "#3b82f6";
+
+  return (
+    <div style={{ position: "relative", padding: 4 }}>
+      <div style={{ fontWeight: "bold" }}>{event.title}</div>
+      {tagName && (
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#fff",
+            borderRadius: 8,
+            padding: "2px 8px",
+            marginTop: 2,
+            display: "inline-block",
+            background: `linear-gradient(90deg, rgba(${hexToRgb(
+              tagColor
+            )},0.3) 0%, ${tagColor} 100%)`,
+          }}
+        >
+          {tagName}
+        </span>
+      )}
+    </div>
+  );
+}
+
 const mapEventsToFullCalendar = (events) => {
   return events.map(evt => ({
     id: evt.id,
@@ -25,10 +56,9 @@ const CalendarWrapper = ({
   tags = [],
   handleDateClick,
   handleEventClick,
-  eventsKey, // useMemo in parent
+  eventsKey,
   debug,
 }) => {
-  // Only recalculate when the list of events actually changes
   const fullCalendarEvents = useMemo(() => {
     debug("🟦 [CalendarWrapper] Raw events prop:");
     debug(JSON.stringify(events, null, 2));
@@ -37,7 +67,7 @@ const CalendarWrapper = ({
     debug(JSON.stringify(mapped, null, 2));
     return mapped;
     // eslint-disable-next-line
-  }, [eventsKey]); // Use the memoized key for stability
+  }, [eventsKey]);
 
   return (
     <div style={{ background: "#181818", padding: 10, borderRadius: 10 }}>
@@ -51,6 +81,7 @@ const CalendarWrapper = ({
         }}
         height="auto"
         events={fullCalendarEvents}
+        eventContent={renderEventContent}
         eventClick={handleEventClick}
         dateClick={handleDateClick}
         nowIndicator
