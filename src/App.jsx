@@ -13,6 +13,7 @@ import "./App.css";
 const App = () => {
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
+  const [showDebug, setShowDebug] = useState(false); // debug toggle
   const [events, setEvents] = useState([]);
   const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -38,14 +39,9 @@ const App = () => {
     channelId: null,
   });
 
-  // Limit the debug log to 200 entries for sanity
-  const debug = (msg) =>
-    setAuthDebug((prev) => {
-      const next = [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)];
-      return next.length > 200 ? next.slice(next.length - 200) : next;
-    });
-
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
+  const debug = (msg) =>
+    setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
 
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
@@ -96,7 +92,6 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
-  // MAIN Firestore effect
   useEffect(() => {
     debug("⏳ Firestore effect running. channelId: " + channelId);
 
@@ -107,30 +102,24 @@ const App = () => {
       return;
     }
 
-    // EVENTS
+    // The actual filtered query
     let eventsQuery = query(
       collection(db, "events"),
       where("channelId", "==", channelId),
       orderBy("date", "asc")
     );
-    debug("🔍 Firestore events query created with channelId: " + channelId);
+    debug(
+      "🔍 Firestore events query created with channelId: " +
+        channelId
+    );
 
-   const unsubscribeEvents = onSnapshot(
-  eventsQuery,
-  (snapshot) => {
-    debug("📦 Firestore events snapshot FIRED!");
-    const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    debug("📦 Firestore events snapshot:", eventsData);
-    setEvents(eventsData);
-  },
-  (error) => {
-    debug("❌ Firestore onSnapshot ERROR: " + error.message);
-  }
-);
+    const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      debug("📦 Firestore events snapshot:");
+      debug(eventsData);
+      setEvents(eventsData);
+    });
 
-
-
-    // TAGS
     let tagsQuery = query(
       collection(db, "tags"),
       where("channelId", "==", channelId)
@@ -149,6 +138,7 @@ const App = () => {
       unsubscribeTags();
     };
   }, [channelId]);
+
 
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
@@ -289,7 +279,7 @@ const App = () => {
         while (start <= end) {
           newEvents.push({
             ...newEvent,
-            id: Math.random().toString(36).substr(2, 9), // unique enough for temp use
+            id: Math.random().toString(36).substr(2, 9),
             date: start.toISOString().split("T")[0],
             originDate: date,
             isRecurring: true,
@@ -424,6 +414,52 @@ const App = () => {
   // ------- RENDER -------
   return (
     <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
+      {/* Debug toggle button, always visible */}
+      <div style={{ position: "fixed", top: 15, right: 15, zIndex: 999 }}>
+        <button
+          onClick={() => setShowDebug((prev) => !prev)}
+          style={{
+            background: showDebug ? "#f97316" : "#333",
+            color: "#fff",
+            border: "none",
+            borderRadius: "50%",
+            width: 38,
+            height: 38,
+            fontWeight: "bold",
+            fontSize: 20,
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            transition: "background 0.2s",
+          }}
+          title={showDebug ? "Hide Debug Log" : "Show Debug Log"}
+        >
+          {showDebug ? "✕" : "🐞"}
+        </button>
+      </div>
+      {/* Floating debug log bubble */}
+      {showDebug && authDebug.length > 0 && (
+        <div
+          style={{
+            background: "#3a3a3a",
+            padding: 10,
+            borderRadius: 8,
+            fontSize: 12,
+            fontFamily: "monospace",
+            position: "fixed",
+            top: 65,
+            right: 15,
+            zIndex: 999,
+            minWidth: 340,
+            maxHeight: 350,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            overflowY: "auto",
+          }}
+        >
+          <strong>🔧 Auth Debug Log:</strong>
+          <pre style={{ whiteSpace: "pre-wrap", marginTop: 5 }}>{authDebug.join("\n")}</pre>
+        </div>
+      )}
+
       <h2 style={{ color: "#f97316", fontSize: 24, fontWeight: "bold", textAlign: "center", marginBottom: 20 }}>
         Care Calendar
       </h2>
@@ -436,23 +472,6 @@ const App = () => {
         <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
         <TagManager tags={tags} setTags={setTags} channelId={channelId} />
       </div>
-      {authDebug.length > 0 && (
-        <div
-          style={{
-            background: "#3a3a3a",
-            padding: 10,
-            borderRadius: 6,
-            fontSize: 12,
-            fontFamily: "monospace",
-            marginBottom: 20,
-            maxHeight: 200,
-            overflowY: "auto",
-          }}
-        >
-          <strong>🔧 Auth Debug Log:</strong>
-          <pre style={{ whiteSpace: "pre-wrap", marginTop: 5 }}>{authDebug.join("\n")}</pre>
-        </div>
-      )}
       {confirmDialog && (
         <ConfirmDialog
           message={confirmDialog.message}
