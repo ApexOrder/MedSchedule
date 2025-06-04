@@ -3,21 +3,22 @@ import { db } from "../firebase";
 import hexToRgb from "../utils/hexToRgb";
 import React from "react";
 
-const TagManager = ({ tags, setTags, channelId }) => {
-  // Remove loading/deleting state for simplicity
-
+const TagManager = ({ tags, setTags, channelId, debug }) => {
   const handleDeleteTag = async (tagId) => {
+    debug(`🟠 [TagManager] Attempting to delete tag: ${tagId}`);
     try {
       await deleteDoc(doc(db, "tags", tagId));
+      debug(`🟢 [TagManager] Successfully deleted tag: ${tagId}`);
       setTags(tags.filter(tag => tag.id !== tagId));
     } catch (err) {
+      debug(`🔴 [TagManager] Failed to delete tag: ${tagId} | Error: ${err.message}`);
       alert("Failed to delete tag: " + err.message);
     }
   };
 
   return (
     <div>
-      {/* ... Tag adding form ... */}
+      {/* ...Tag adding form... */}
       <div style={{ marginTop: 10 }}>
         {tags.map((tag) => (
           <span
@@ -54,7 +55,10 @@ const TagManager = ({ tags, setTags, channelId }) => {
                 transition: "opacity 0.14s, color 0.14s",
               }}
               title="Delete tag"
-              onClick={() => handleDeleteTag(tag.id)}
+              onClick={e => {
+                e.stopPropagation();
+                handleDeleteTag(tag.id);
+              }}
             >
               ✕
             </button>
