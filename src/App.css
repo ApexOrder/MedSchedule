@@ -213,6 +213,39 @@ button:focus {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.calendar-tooltip-bubble {
+  position: absolute;
+  left: 50%;
+  bottom: 120%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: #23272f;
+  color: #fff;
+  padding: 11px 17px;
+  border-radius: 9px;
+  box-shadow: 0 8px 36px 0 rgba(0,0,0,0.24), 0 1.5px 8px 0 rgba(0,0,0,0.09);
+  font-size: 13px;
+  min-width: 170px;
+  max-width: 290px;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0.96;
+  transition: opacity 0.14s;
+  border: 1.5px solid #4b5563;
+}
+
+.calendar-tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -8px;
+  border-width: 8px;
+  border-style: solid;
+  border-color: #23272f transparent transparent transparent;
+}
+
+
 /* Tooltip improved style */
 .tooltip-custom {
   position: absolute;
