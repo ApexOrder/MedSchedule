@@ -8,12 +8,14 @@ import TagManager from "./components/TagManager";
 import EventModal from "./components/EventModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import CalendarWrapper from "./components/CalendarWrapper";
+import hexToRgb from "./utils/hexToRgb";
 import "./App.css";
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
   const [showDebug, setShowDebug] = useState(false);
+
   const [events, setEvents] = useState([]);
   const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -23,35 +25,6 @@ const App = () => {
   const [isPastEvent, setIsPastEvent] = useState(false);
   const [channelId, setChannelId] = useState(null);
   const [showTagManager, setShowTagManager] = useState(false);
-
-
-  // Debug bubble drag state
-  const [debugPosition, setDebugPosition] = useState({ top: 80, right: 25 });
-  const [drag, setDrag] = useState({ dragging: false, offsetX: 0, offsetY: 0 });
-
-  const startDrag = (e) => {
-    setDrag({
-      dragging: true,
-      offsetX: e.clientX - debugPosition.right,
-      offsetY: e.clientY - debugPosition.top,
-    });
-  };
-  const stopDrag = () => setDrag((d) => ({ ...d, dragging: false }));
-  useEffect(() => {
-    if (!drag.dragging) return;
-    const move = (e) => {
-      setDebugPosition({
-        top: e.clientY - drag.offsetY,
-        right: window.innerWidth - e.clientX - 10,
-      });
-    };
-    window.addEventListener("mousemove", move);
-    window.addEventListener("mouseup", stopDrag);
-    return () => {
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("mouseup", stopDrag);
-    };
-  }, [drag.dragging, drag.offsetX, drag.offsetY]);
 
   const [newEvent, setNewEvent] = useState({
     id: null,
@@ -71,11 +44,9 @@ const App = () => {
 
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
   const debug = (msg) =>
-    setAuthDebug((prev) => [
-      ...prev,
-      typeof msg === "string" ? msg : JSON.stringify(msg, null, 2),
-    ]);
+    setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
 
+  // MS Teams Context/Auth
   useEffect(() => {
     debug("🌐 iframe origin: " + window.location.origin);
     debug("🔰 Initializing Microsoft Teams SDK...");
@@ -88,8 +59,7 @@ const App = () => {
       .then((context) => {
         debug("🟢 Got Teams context:");
         debug(JSON.stringify(context, null, 2));
-        const chId =
-          context.channelId || (context.channel && context.channel.id) || null;
+        const chId = context.channelId || (context.channel && context.channel.id) || null;
         debug("ChannelId detected: " + chId);
         setChannelId(chId);
         authentication.getAuthToken({
@@ -126,6 +96,7 @@ const App = () => {
       .catch((err) => debug("❌ Initialization failed: " + JSON.stringify(err)));
   }, []);
 
+  // Events and tags (per channel)
   useEffect(() => {
     debug("⏳ Firestore effect running. channelId: " + channelId);
 
@@ -136,68 +107,21 @@ const App = () => {
       return;
     }
 
-    // Diagnostic: Log *every* event in the database regardless of channel
-    const allEventsQuery = query(
-      collection(db, "events"),
-      orderBy("date", "asc")
-    );
-    const unsubscribeAllEvents = onSnapshot(allEventsQuery, (snapshot) => {
-      const allEventsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      debug("🟡 ALL EVENTS in Firestore:");
-      allEventsData.forEach((evt, i) => {
-        debug(
-          `[${i}] title: ${evt.title} | channelId: [${evt.channelId}] (len: ${
-            evt.channelId?.length
-          })`
-        );
-      });
-    });
-
-    // The actual filtered query
+    // Events Query
     let eventsQuery = query(
       collection(db, "events"),
       where("channelId", "==", channelId),
       orderBy("date", "asc")
     );
-    debug(
-      "🔍 Firestore events query created with channelId: [" +
-        channelId +
-        "] (len: " +
-        channelId.length +
-        ")"
-    );
+    debug("🔍 Firestore events query created with channelId: " + channelId);
 
     const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       debug("📦 Firestore events snapshot:", eventsData);
-
-      if (eventsData.length > 0) {
-        debug(
-          `🟢 First matched event channelId: [${eventsData[0]?.channelId}] (len: ${
-            eventsData[0]?.channelId?.length
-          })`
-        );
-        debug(
-          `🟢 String equality: ${
-            channelId === eventsData[0]?.channelId ? "TRUE" : "FALSE"
-          }`
-        );
-      } else {
-        debug(
-          "🔴 No events matched for this channelId. Double-check for invisible whitespace, typo, or inconsistent channelId usage."
-        );
-      }
-
       setEvents(eventsData);
-      debug("🚦 setEvents will update with: ", eventsData);
     });
 
+    // Tags Query
     let tagsQuery = query(
       collection(db, "tags"),
       where("channelId", "==", channelId)
@@ -205,13 +129,8 @@ const App = () => {
     debug("🔍 Firestore tags query created with channelId: " + channelId);
 
     const unsubscribeTags = onSnapshot(tagsQuery, (snapshot) => {
-      const tagsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      debug(
-        `🏷️ [${tagsData.length}] tags for channelId: ${channelId}`
-      );
+      const tagsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      debug(`🏷️ [${tagsData.length}] tags for channelId: ${channelId}`);
       setTags(tagsData);
     });
 
@@ -219,10 +138,10 @@ const App = () => {
       debug("🧹 Firestore unsubscribe called for channelId: " + channelId);
       unsubscribeEvents();
       unsubscribeTags();
-      unsubscribeAllEvents();
     };
   }, [channelId]);
 
+  // Helper to check if a date is in the past
   const isPastDate = (dateStr) => {
     const eventDate = new Date(dateStr);
     const today = new Date();
@@ -230,7 +149,7 @@ const App = () => {
     return eventDate < today;
   };
 
-  // --------- Calendar Handlers ---------
+  // Calendar Handlers
   const handleDateClick = (info) => {
     if (!channelId) {
       debug("❌ Cannot create event: channelId not loaded yet!");
@@ -332,9 +251,7 @@ const App = () => {
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
         const updateTargets = events.filter(
-          (e) =>
-            e.originDate === originDate &&
-            new Date(e.date) >= new Date(newEvent.date)
+          (e) => e.originDate === originDate && new Date(e.date) >= new Date(newEvent.date)
         );
         newEvents = updateTargets.map((e) => ({
           ...newEvent,
@@ -364,7 +281,7 @@ const App = () => {
         while (start <= end) {
           newEvents.push({
             ...newEvent,
-            id: Math.random().toString(36).substr(2, 9),
+            id: Math.random().toString(36).substr(2, 9), // unique enough for temp use
             date: start.toISOString().split("T")[0],
             originDate: date,
             isRecurring: true,
@@ -496,180 +413,211 @@ const App = () => {
     }
   };
 
-  // ------- RENDER -------
+  // --------- RENDER ---------
   return (
-    <div style={{ padding: 20, background: "#1e1e1e", color: "#fff", minHeight: "100vh" }}>
-      {/* DEBUG TOGGLE & BUBBLE */}
-      <div
+    <div style={{
+      padding: 20,
+      background: "#1e1e1e",
+      color: "#fff",
+      minHeight: "100vh",
+      fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
+      position: "relative"
+    }}>
+      {/* Debug Toggle */}
+      <button
+        onClick={() => setShowDebug(d => !d)}
         style={{
           position: "fixed",
-          top: 20,
-          right: 24,
-          zIndex: 1001,
-          userSelect: "none",
+          top: 22,
+          right: 28,
+          zIndex: 3333,
+          background: showDebug ? "#f97316" : "#444",
+          color: "#fff",
+          border: "none",
+          borderRadius: 10,
+          padding: "6px 18px",
+          fontWeight: 600,
+          fontSize: 14,
+          cursor: "pointer",
+          boxShadow: showDebug ? "0 2px 8px #0007" : "",
+          transition: "background 0.25s, box-shadow 0.25s",
         }}
+        title={showDebug ? "Hide debug window" : "Show debug window"}
       >
+        {showDebug ? "Hide Debug" : "Show Debug"}
+      </button>
+
+      <h2 style={{
+        color: "#f97316",
+        fontSize: 26,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 18,
+        letterSpacing: 0.5,
+        textShadow: "0 2px 12px #0007"
+      }}>
+        Care Calendar
+      </h2>
+
+      {/* Tags row at top */}
+      <div style={{
+        background: "#232338",
+        borderRadius: 10,
+        margin: "0 auto 22px",
+        padding: "16px 22px",
+        maxWidth: 830,
+        minHeight: 52,
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        boxShadow: "0 4px 24px #0001"
+      }}>
+        <span style={{
+          color: "#f97316",
+          fontWeight: 700,
+          fontSize: 18,
+          letterSpacing: 0.5,
+          marginRight: 9
+        }}>Tags</span>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 8,
+          maxWidth: 550,
+        }}>
+          {tags.length === 0 && <span style={{ opacity: 0.6, fontSize: 13 }}>No tags for this channel yet.</span>}
+          {tags.map(tag => (
+            <span
+              key={tag.id}
+              style={{
+                background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)},0), ${tag.color} 96%)`,
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: 13.5,
+                borderRadius: 18,
+                padding: "5px 14px",
+                boxShadow: "0 2px 6px #0003",
+                letterSpacing: 0.1,
+                marginRight: 2,
+                userSelect: "none",
+                textShadow: "0 1px 2px #0005",
+                transition: "box-shadow .22s, transform .22s",
+                cursor: "pointer"
+              }}
+              title={tag.name}
+            >{tag.name}</span>
+          ))}
+        </div>
         <button
-          onClick={() => setShowDebug((prev) => !prev)}
+          onClick={() => setShowTagManager(true)}
           style={{
-            background: showDebug
-              ? "linear-gradient(135deg, #f97316 60%, #ea4c89 100%)"
-              : "rgba(35,35,40,0.85)",
+            marginLeft: "auto",
+            background: "#35386a",
             color: "#fff",
             border: "none",
-            borderRadius: "50%",
-            width: 46,
-            height: 46,
-            fontWeight: "bold",
-            fontSize: 24,
+            borderRadius: 12,
+            padding: "8px 17px",
+            fontWeight: 700,
+            fontSize: 14.5,
             cursor: "pointer",
-            boxShadow: showDebug
-              ? "0 0 24px #f9731666, 0 4px 16px #0008"
-              : "0 2px 8px #0009",
-            transition: "all 0.2s cubic-bezier(.44,2,.31,.98)",
-            outline: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            filter: showDebug ? "brightness(1.1)" : "none",
+            letterSpacing: 0.3,
+            boxShadow: "0 2px 8px #0002",
+            transition: "background .22s",
           }}
-          title={showDebug ? "Hide Debug Log" : "Show Debug Log"}
-        >
-          {showDebug ? "✕" : "🐞"}
-        </button>
+        >Manage Tags</button>
       </div>
-      {showDebug && (
+
+      {/* Tag Manager Modal */}
+      {showTagManager && (
         <div
           style={{
             position: "fixed",
-            top: debugPosition.top,
-            right: debugPosition.right,
-            zIndex: 1000,
-            background: "rgba(36,38,50, 0.82)",
-            boxShadow: "0 8px 36px 0 #0007, 0 1.5px 6px #f9731620",
-            borderRadius: 18,
-            padding: 18,
-            minWidth: 350,
-            maxWidth: 430,
-            maxHeight: 420,
-            overflowY: "auto",
-            color: "#fff",
-            fontFamily: "JetBrains Mono, Fira Mono, monospace",
-            fontSize: 13,
-            backdropFilter: "blur(12px) saturate(1.2)",
-            border: "1.5px solid #f9731633",
-            transition: "opacity .15s cubic-bezier(.68,-0.6,.32,1.6)",
-            opacity: showDebug ? 1 : 0,
-            userSelect: "text",
-            cursor: drag.dragging ? "grabbing" : "grab",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(25,28,38,0.78)",
+            backdropFilter: "blur(2px)",
+            zIndex: 2222,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "fadeIn 0.2s",
           }}
-          onMouseDown={startDrag}
+          onClick={() => setShowTagManager(false)}
         >
-          <div style={{ display: "flex", alignItems: "center", marginBottom: 7 }}>
-            <span
-              style={{
-                color: "#f97316",
-                fontWeight: "bold",
-                fontSize: 18,
-                marginRight: 10,
-                letterSpacing: "1.5px",
-              }}
-            >
-              🐞 Debug Log
-            </span>
+          <div
+            style={{
+              background: "#232338",
+              borderRadius: 18,
+              minWidth: 360,
+              maxWidth: 420,
+              width: "96vw",
+              boxShadow: "0 12px 32px #0007",
+              padding: 28,
+              position: "relative",
+              animation: "scalePop 0.19s",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDebug(false);
-              }}
+              onClick={() => setShowTagManager(false)}
               style={{
-                marginLeft: "auto",
+                position: "absolute",
+                top: 10, right: 10,
                 background: "none",
                 color: "#fff",
+                fontSize: 20,
                 border: "none",
-                fontWeight: "bold",
-                fontSize: 18,
                 cursor: "pointer",
-                opacity: 0.66,
-                transition: "opacity 0.15s",
+                opacity: 0.7,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.66")}
-              title="Close Debug"
-            >
-              ✕
-            </button>
+              title="Close"
+            >✕</button>
+            <h3 style={{ color: "#f97316", margin: 0, marginBottom: 16, textAlign: "center" }}>
+              Manage Tags
+            </h3>
+            <TagManager tags={tags} setTags={setTags} channelId={channelId} />
           </div>
-          <pre
-            style={{
-              whiteSpace: "pre-wrap",
-              marginTop: 0,
-              marginBottom: 0,
-              color: "#fff",
-              fontSize: 13,
-              lineHeight: 1.6,
-            }}
-          >
-            {authDebug.join("\n")}
-          </pre>
         </div>
       )}
 
-      {/* MAIN APP */}
-      <h2
-        style={{
-          color: "#f97316",
-          fontSize: 24,
-          fontWeight: "bold",
-          textAlign: "center",
-          marginBottom: 20,
-        }}
-      >
-        Care Calendar
-      </h2>
-      <div style={{ background: "#2d2d2d", padding: 12, borderRadius: 6, marginBottom: 10 }}>
+      {/* User display */}
+      <div style={{
+        background: "#29293e",
+        padding: "9px 18px",
+        borderRadius: 9,
+        margin: "0 auto 12px",
+        maxWidth: 430,
+        fontSize: 15,
+        letterSpacing: 0.1
+      }}>
         {user ? (
-          <>
-            👤 <strong>{user.displayName}</strong> ({user.email})
-          </>
-        ) : (
-          <>🔄 Authenticating…</>
-        )}
+          <>👤 <strong>{user.displayName}</strong> ({user.email})</>
+        ) : (<>🔄 Authenticating…</>)}
       </div>
-      <div
-  style={{
-    marginBottom: 20,
-    padding: 12,
-    background: "#2d2d2d",
-    borderRadius: 6,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  }}
->
-  <h3 style={{ color: "#f97316", margin: 0 }}>Tags</h3>
-  <button
-    style={{
-      background: "linear-gradient(90deg,#f97316 60%,#ea4c89 100%)",
-      color: "#fff",
-      border: "none",
-      borderRadius: 8,
-      padding: "8px 16px",
-      fontWeight: 600,
-      fontSize: 15,
-      cursor: "pointer",
-      boxShadow: "0 1px 8px #0004",
-      marginLeft: 12,
-      transition: "filter 0.2s",
-    }}
-    onClick={() => setShowTagManager(true)}
-    onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.13)"}
-    onMouseLeave={e => e.currentTarget.style.filter = "none"}
-  >
-    Manage Tags
-  </button>
-</div>
 
+      {/* Debug Window */}
+      {showDebug && authDebug.length > 0 && (
+        <div
+          style={{
+            background: "#3a3a3a",
+            padding: 15,
+            borderRadius: 10,
+            fontSize: 12,
+            fontFamily: "monospace",
+            margin: "20px auto",
+            maxWidth: 950,
+            minHeight: 80,
+            maxHeight: 250,
+            overflowY: "auto",
+            boxShadow: "0 6px 30px #0003"
+          }}
+        >
+          <strong>🔧 Auth Debug Log:</strong>
+          <pre style={{ whiteSpace: "pre-wrap", marginTop: 5 }}>{authDebug.join("\n")}</pre>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
       {confirmDialog && (
         <ConfirmDialog
           message={confirmDialog.message}
@@ -677,6 +625,8 @@ const App = () => {
           onCancel={confirmDialog.onCancel}
         />
       )}
+
+      {/* Event Modal */}
       <EventModal
         show={showModal}
         newEvent={newEvent}
@@ -690,6 +640,8 @@ const App = () => {
         handleDeleteEvent={requestDeleteEvent}
         handleDeleteSeries={requestDeleteSeries}
       />
+
+      {/* Calendar */}
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
           events={events}
@@ -700,57 +652,6 @@ const App = () => {
           debug={debug}
         />
       </div>
-      {showTagManager && (
-  <div
-    style={{
-      position: "fixed",
-      top: 0, left: 0, right: 0, bottom: 0,
-      background: "rgba(25,28,38,0.78)",
-      backdropFilter: "blur(2px)",
-      zIndex: 2222,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      animation: "fadeIn 0.2s",
-    }}
-    onClick={() => setShowTagManager(false)}
-  >
-    <div
-      style={{
-        background: "#232338",
-        borderRadius: 18,
-        minWidth: 360,
-        maxWidth: 420,
-        width: "96vw",
-        boxShadow: "0 12px 32px #0007",
-        padding: 28,
-        position: "relative",
-        animation: "scalePop 0.19s",
-      }}
-      onClick={e => e.stopPropagation()}
-    >
-      <button
-        onClick={() => setShowTagManager(false)}
-        style={{
-          position: "absolute",
-          top: 10, right: 10,
-          background: "none",
-          color: "#fff",
-          fontSize: 20,
-          border: "none",
-          cursor: "pointer",
-          opacity: 0.7,
-        }}
-        title="Close"
-      >✕</button>
-      <h3 style={{ color: "#f97316", margin: 0, marginBottom: 16, textAlign: "center" }}>
-        Manage Tags
-      </h3>
-      <TagManager tags={tags} setTags={setTags} channelId={channelId} />
-    </div>
-  </div>
-)}
-
     </div>
   );
 };
