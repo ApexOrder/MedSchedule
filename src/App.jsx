@@ -22,6 +22,8 @@ const App = () => {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [isPastEvent, setIsPastEvent] = useState(false);
   const [channelId, setChannelId] = useState(null);
+  const [showTagManager, setShowTagManager] = useState(false);
+
 
   // Debug bubble drag state
   const [debugPosition, setDebugPosition] = useState({ top: 80, right: 25 });
@@ -635,16 +637,39 @@ const App = () => {
         )}
       </div>
       <div
-        style={{
-          marginBottom: 20,
-          padding: 12,
-          background: "#2d2d2d",
-          borderRadius: 6,
-        }}
-      >
-        <h3 style={{ color: "#f97316", marginBottom: 8 }}>Manage Tags</h3>
-        <TagManager tags={tags} setTags={setTags} channelId={channelId} />
-      </div>
+  style={{
+    marginBottom: 20,
+    padding: 12,
+    background: "#2d2d2d",
+    borderRadius: 6,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  }}
+>
+  <h3 style={{ color: "#f97316", margin: 0 }}>Tags</h3>
+  <button
+    style={{
+      background: "linear-gradient(90deg,#f97316 60%,#ea4c89 100%)",
+      color: "#fff",
+      border: "none",
+      borderRadius: 8,
+      padding: "8px 16px",
+      fontWeight: 600,
+      fontSize: 15,
+      cursor: "pointer",
+      boxShadow: "0 1px 8px #0004",
+      marginLeft: 12,
+      transition: "filter 0.2s",
+    }}
+    onClick={() => setShowTagManager(true)}
+    onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.13)"}
+    onMouseLeave={e => e.currentTarget.style.filter = "none"}
+  >
+    Manage Tags
+  </button>
+</div>
+
       {confirmDialog && (
         <ConfirmDialog
           message={confirmDialog.message}
@@ -675,6 +700,57 @@ const App = () => {
           debug={debug}
         />
       </div>
+      {showTagManager && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(25,28,38,0.78)",
+      backdropFilter: "blur(2px)",
+      zIndex: 2222,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      animation: "fadeIn 0.2s",
+    }}
+    onClick={() => setShowTagManager(false)}
+  >
+    <div
+      style={{
+        background: "#232338",
+        borderRadius: 18,
+        minWidth: 360,
+        maxWidth: 420,
+        width: "96vw",
+        boxShadow: "0 12px 32px #0007",
+        padding: 28,
+        position: "relative",
+        animation: "scalePop 0.19s",
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      <button
+        onClick={() => setShowTagManager(false)}
+        style={{
+          position: "absolute",
+          top: 10, right: 10,
+          background: "none",
+          color: "#fff",
+          fontSize: 20,
+          border: "none",
+          cursor: "pointer",
+          opacity: 0.7,
+        }}
+        title="Close"
+      >✕</button>
+      <h3 style={{ color: "#f97316", margin: 0, marginBottom: 16, textAlign: "center" }}>
+        Manage Tags
+      </h3>
+      <TagManager tags={tags} setTags={setTags} channelId={channelId} />
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
