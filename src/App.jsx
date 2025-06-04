@@ -115,15 +115,14 @@ const App = () => {
     );
     debug("🔍 Firestore events query created with channelId: " + channelId);
 
-    const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-      const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      debug(`📦 [${eventsData.length}] events for channelId: ${channelId}`);
-      if (eventsData.length > 0) {
-        debug("Titles: " + eventsData.map(e => `${e.title} (${e.date})`).join(", "));
-      }
-      debug("📦 Firestore events snapshot:", eventsData);
-      setEvents(eventsData);
-    });
+    debug("🔥 Setting up Firestore onSnapshot subscription...");
+const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
+  debug("📦 Firestore events snapshot FIRED!");
+  const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  debug("📦 Firestore events snapshot:", eventsData);
+  setEvents(eventsData);
+});
+
 
     // TAGS
     let tagsQuery = query(
