@@ -3,7 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import hexToRgb from "../utils/hexToRgb"; // or paste your helper inline
+import hexToRgb from "/utils/hexToRgb"; // or paste your helper inline
 
 const CalendarWrapper = ({
   events = [],
