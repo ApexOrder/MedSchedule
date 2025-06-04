@@ -1,55 +1,64 @@
-import React, { useEffect } from "react";
+import React, { useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-// ...other imports
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
 
-const CalendarWrapper = ({ events, tags, handleDateClick, handleEventClick, eventsKey, debug }) => {
-  // INFINITE LOOP - BAD:
-  // debug("[CalendarWrapper] Raw events prop:", events);
+// Utility: Helper to format the event as needed for FullCalendar
+const mapEventsToFullCalendar = (events) => {
+  return events.map(evt => ({
+    id: evt.id,
+    title: evt.title,
+    start: evt.date,
+    color: evt.color || "#f97316",
+    extendedProps: {
+      notes: evt.notes,
+      createdBy: evt.createdBy,
+      tagName: evt.tagName,
+      tagColor: evt.tagColor,
+    },
+  }));
+};
 
-  // CORRECT: useEffect to log only when events change
-  useEffect(() => {
+const CalendarWrapper = ({
+  events = [],
+  tags = [],
+  handleDateClick,
+  handleEventClick,
+  eventsKey, // useMemo in parent
+  debug,
+}) => {
+  // Only recalculate when the list of events actually changes
+  const fullCalendarEvents = useMemo(() => {
     debug("🟦 [CalendarWrapper] Raw events prop:");
-    debug(events);
-    // if you want, also log the mapped output:
-    const mapped = events.map(e => ({
-      id: e.id,
-      title: e.title,
-      start: e.date,
-      color: e.color,
-      extendedProps: {
-        notes: e.notes,
-        createdBy: e.createdBy,
-        tagName: e.tagName,
-        tagColor: tags.find(t => t.name === e.tagName)?.color || null,
-      }
-    }));
+    debug(JSON.stringify(events, null, 2));
+    const mapped = mapEventsToFullCalendar(events);
     debug("🟩 [CalendarWrapper] Final mapped events to FullCalendar:");
-    debug(mapped);
-  }, [events, tags, debug]);
+    debug(JSON.stringify(mapped, null, 2));
+    return mapped;
+    // eslint-disable-next-line
+  }, [eventsKey]); // Use the memoized key for stability
 
-  // ...rest of your CalendarWrapper rendering
   return (
-    <FullCalendar
-      plugins={[dayGridPlugin]}
-      initialView="dayGridMonth"
-      events={events.map(e => ({
-        id: e.id,
-        title: e.title,
-        start: e.date,
-        color: e.color,
-        extendedProps: {
-          notes: e.notes,
-          createdBy: e.createdBy,
-          tagName: e.tagName,
-          tagColor: tags.find(t => t.name === e.tagName)?.color || null,
-        }
-      }))}
-      dateClick={handleDateClick}
-      eventClick={handleEventClick}
-      key={eventsKey}
-      // ...other props
-    />
+    <div style={{ background: "#181818", padding: 10, borderRadius: 10 }}>
+      <FullCalendar
+        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+        initialView="dayGridMonth"
+        headerToolbar={{
+          left: "prev,next today",
+          center: "title",
+          right: "dayGridMonth,timeGridWeek,timeGridDay",
+        }}
+        height="auto"
+        events={fullCalendarEvents}
+        eventClick={handleEventClick}
+        dateClick={handleDateClick}
+        nowIndicator
+        dayMaxEvents={2}
+        eventDisplay="block"
+        fixedWeekCount={false}
+      />
+    </div>
   );
 };
 
