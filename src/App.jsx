@@ -115,13 +115,19 @@ const App = () => {
     );
     debug("🔍 Firestore events query created with channelId: " + channelId);
 
-    debug("🔥 Setting up Firestore onSnapshot subscription...");
-const unsubscribeEvents = onSnapshot(eventsQuery, (snapshot) => {
-  debug("📦 Firestore events snapshot FIRED!");
-  const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  debug("📦 Firestore events snapshot:", eventsData);
-  setEvents(eventsData);
-});
+   const unsubscribeEvents = onSnapshot(
+  eventsQuery,
+  (snapshot) => {
+    debug("📦 Firestore events snapshot FIRED!");
+    const eventsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    debug("📦 Firestore events snapshot:", eventsData);
+    setEvents(eventsData);
+  },
+  (error) => {
+    debug("❌ Firestore onSnapshot ERROR: " + error.message);
+  }
+);
+
 
 
     // TAGS
