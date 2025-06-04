@@ -102,7 +102,7 @@ const App = () => {
       return;
     }
 
-    // The actual filtered query
+    // The actual filtered query.
     let eventsQuery = query(
       collection(db, "events"),
       where("channelId", "==", channelId),
