@@ -1,4 +1,5 @@
-// @vercel/cron: "*/5 * * * *"
+// @vercel/cron: "35 16 * * *"
+
 
 
 import { initializeApp, cert, getApps } from "firebase-admin/app";
