@@ -40,81 +40,105 @@ const TagManager = ({ tags, setTags, channelId }) => {
 
   return (
     <div>
-      <input
-        placeholder="Tag name"
-        value={newName}
-        onChange={(e) => setNewName(e.target.value)}
-        style={{ padding: 6, marginRight: 8, borderRadius: 4, border: "1px solid #555" }}
-      />
-      <input
-        type="color"
-        value={newColor}
-        onChange={(e) => setNewColor(e.target.value)}
-        style={{ marginRight: 8, width: 40, height: 30, verticalAlign: "middle", borderRadius: 4, border: "1px solid #555" }}
-      />
-      <button
-        onClick={addTag}
-        style={{
-          padding: "6px 12px",
-          borderRadius: 4,
-          border: "none",
-          backgroundColor: "#f97316",
-          color: "#fff",
-          cursor: "pointer",
-          transition: "filter 0.3s",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.1)")}
-        onMouseLeave={(e) => (e.currentTarget.style.filter = "brightness(1)")}
-      >
-        Add Tag
-      </button>
+  {/* Input row: name, color, button */}
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+    <input
+      placeholder="Tag name"
+      value={newName}
+      onChange={(e) => setNewName(e.target.value)}
+      style={{
+        padding: "7px 10px",
+        borderRadius: 8,
+        border: "1.5px solid #444",
+        background: "#1c1d25",
+        color: "#fff",
+        fontSize: 14,
+        outline: "none",
+        minWidth: 90
+      }}
+    />
+    <input
+      type="color"
+      value={newColor}
+      onChange={(e) => setNewColor(e.target.value)}
+      style={{
+        width: 34,
+        height: 34,
+        border: "none",
+        borderRadius: 8,
+        background: "#222",
+        boxShadow: "0 2px 8px #0002"
+      }}
+    />
+    <button
+      onClick={addTag}
+      style={{
+        padding: "8px 16px",
+        borderRadius: 8,
+        border: "none",
+        background: "#f97316",
+        color: "#fff",
+        fontWeight: 700,
+        fontSize: 15,
+        cursor: "pointer",
+        transition: "background 0.2s",
+        marginLeft: 4
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = "#ff9100")}
+      onMouseLeave={e => (e.currentTarget.style.background = "#f97316")}
+    >
+      Add Tag
+    </button>
+  </div>
 
-      <div style={{ marginTop: 10 }}>
-        {tags.map((tag) => (
-          <span
-  key={tag.id}
-  className="tag-pill"
-  title={tag.name}
-  style={{
-    background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
-    color: tag.color.toLowerCase() === "#ffffff" ? "#222" : "#fff", // <-- NEW
-    marginRight: 6,
-    marginBottom: 6,
-    padding: "6px 14px",
-    borderRadius: 20,
-    fontSize: 13,
-    fontWeight: 600,
-    boxShadow: `0 2px 6px ${tag.color}55`,
-    cursor: "default",
-    userSelect: "none",
-    transition: "transform 0.3s ease, box-shadow 0.3s ease",
-    fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
-    display: "inline-block",
-  }}
-  onMouseEnter={e => {
-  e.currentTarget.style.boxShadow =
-    tagColor.toLowerCase() === "#ffffff"
-      ? "0 4px 18px #bbb4"
-      : `0 4px 18px ${tagColor}99`; // Stronger shadow on hover
-  e.currentTarget.style.transform = "scale(1.06)";
-}}
-onMouseLeave={e => {
-  e.currentTarget.style.boxShadow =
-    tagColor.toLowerCase() === "#ffffff"
-      ? "0 2px 6px #bbb3"
-      : `0 2px 6px ${tagColor}55`;
-  e.currentTarget.style.transform = "scale(1)";
-}}
+  {/* Tags display */}
+  <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
+    {tags.map((tag) => {
+      const tagColor = tag.color || "#3b82f6";
+      return (
+        <span
+          key={tag.id}
+          className="tag-pill"
+          title={tag.name}
+          style={{
+            background: `linear-gradient(to right, rgba(${hexToRgb(tagColor)}, 0) 0%, ${tagColor} 100%)`,
+            color: tagColor.toLowerCase() === "#ffffff" ? "#222" : "#fff",
+            marginRight: 0,
+            marginBottom: 0,
+            padding: "5px 14px",
+            borderRadius: 20,
+            fontSize: 13,
+            fontWeight: 600,
+            boxShadow: tagColor.toLowerCase() === "#ffffff"
+              ? "0 2px 6px #bbb3"
+              : `0 2px 6px ${tagColor}55`,
+            cursor: "default",
+            userSelect: "none",
+            transition: "transform 0.18s, box-shadow 0.18s",
+            fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
+            display: "inline-block",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.boxShadow =
+              tagColor.toLowerCase() === "#ffffff"
+                ? "0 4px 18px #bbb4"
+                : `0 4px 18px ${tagColor}99`;
+            e.currentTarget.style.transform = "scale(1.06)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.boxShadow =
+              tagColor.toLowerCase() === "#ffffff"
+                ? "0 2px 6px #bbb3"
+                : `0 2px 6px ${tagColor}55`;
+            e.currentTarget.style.transform = "scale(1)";
+          }}
+        >
+          {tag.name}
+        </span>
+      );
+    })}
+  </div>
+</div>
 
->
-  {tag.name}
-</span>
-
-
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export default TagManager;
