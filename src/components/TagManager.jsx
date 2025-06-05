@@ -93,53 +93,62 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       </div>
 
       {/* Tag Pills */}
-      <div style={{ marginTop: 10 }}>
-        {tags.map((tag) => (
-          <span
-            key={tag.id}
-            className="tag-pill"
-            title={tag.name}
-            style={{
-              background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
-              color: "#fff",
-              marginRight: 6,
-              marginBottom: 6,
-              padding: "6px 14px 6px 18px",
-              borderRadius: 20,
-              fontSize: 13,
-              fontWeight: 600,
-              boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-              userSelect: "none",
-              position: "relative",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              opacity: deletingId === tag.id ? 0.5 : 1,
-              cursor: deletingId === tag.id ? "wait" : "default"
-            }}
-          >
-            {tag.name}
-            <button
-              style={{
-                background: "none",
-                border: "none",
-                color: "#fff",
-                marginLeft: 8,
-                cursor: deletingId === tag.id ? "wait" : "pointer",
-                fontSize: 13,
-                opacity: deletingId === tag.id ? 0.4 : 0.7,
-                transition: "opacity 0.14s, color 0.14s",
-              }}
-              title="Delete tag"
-              onClick={e => {
-                e.stopPropagation();
-                handleDeleteTag(tag.id);
-              }}
-              disabled={deletingId === tag.id}
-            >✕</button>
-          </span>
-        ))}
-      </div>
+      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
+  {tags.map((tag) => (
+    <span
+      key={tag.id}
+      className="tag-pill"
+      title={tag.name}
+      style={{
+        background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
+        color: "#fff",
+        padding: "2px 10px 2px 12px",   // much slimmer pill
+        borderRadius: 13,
+        fontSize: 12.5,
+        fontWeight: 600,
+        boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+        userSelect: "none",
+        display: "inline-flex",
+        alignItems: "center",
+        minHeight: 22,
+        gap: 5,
+        opacity: deletingId === tag.id ? 0.5 : 1,
+        cursor: deletingId === tag.id ? "wait" : "default",
+        marginRight: 0,
+        marginBottom: 0,
+        transition: "transform 0.18s, box-shadow 0.18s",
+      }}
+    >
+      {tag.name}
+      <button
+        style={{
+          background: "none",
+          border: "none",
+          color: "#fff",
+          marginLeft: 7,
+          cursor: deletingId === tag.id ? "wait" : "pointer",
+          fontSize: 14,
+          opacity: deletingId === tag.id ? 0.4 : 0.7,
+          display: "flex",
+          alignItems: "center",
+          padding: 0,
+          height: 18,
+          width: 18,
+          lineHeight: 1,
+          borderRadius: "50%",
+          transition: "opacity 0.14s, color 0.14s",
+        }}
+        title="Delete tag"
+        onClick={e => {
+          e.stopPropagation();
+          handleDeleteTag(tag.id);
+        }}
+        disabled={deletingId === tag.id}
+      >✕</button>
+    </span>
+  ))}
+</div>
+
     </div>
   );
 };
