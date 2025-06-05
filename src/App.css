@@ -56,7 +56,6 @@ body, #root, .App {
   transition: background 0.15s;
 }
 .fc-event:hover, .fc-daygrid-event:hover {
-  background: #ffb74d !important;
   color: #22242b !important;
 }
 
