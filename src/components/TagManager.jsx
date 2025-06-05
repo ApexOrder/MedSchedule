@@ -112,7 +112,8 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
     lineHeight: "28px",
     marginTop: 0,     // <-- KEY FIX
     marginBottom: 0,  // <-- KEY FIX
-    boxSizing: "border-box"
+    boxSizing: "border-box",
+    top: "-3px"
   }}
 >
   Add Tag
