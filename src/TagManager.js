@@ -153,7 +153,7 @@ const TagManager = ({ tags, setTags, channelId }) => {
   }}
 >
   {tag.name}
-  <button
+  /*<button
     onClick={() => handleRemoveTag(tag.id)}
     style={{
       marginLeft: 8,
@@ -177,7 +177,7 @@ const TagManager = ({ tags, setTags, channelId }) => {
     title="Delete tag"
     onMouseEnter={e => (e.currentTarget.style.opacity = 1)}
     onMouseLeave={e => (e.currentTarget.style.opacity = 0.6)}
-  >✕</button>
+  >✕</button>*/
 </span>
 
       );
