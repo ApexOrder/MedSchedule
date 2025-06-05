@@ -91,14 +91,21 @@ const TagManager = ({ tags, setTags, channelId }) => {
     fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
     display: "inline-block",
   }}
-  onMouseEnter={(e) => {
-    e.currentTarget.style.transform = "scale(1.1)";
-    e.currentTarget.style.boxShadow = `0 4px 12px ${tag.color}99`;
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.transform = "scale(1)";
-    e.currentTarget.style.boxShadow = `0 2px 6px ${tag.color}55`;
-  }}
+  onMouseEnter={e => {
+  e.currentTarget.style.boxShadow =
+    tagColor.toLowerCase() === "#ffffff"
+      ? "0 4px 18px #bbb4"
+      : `0 4px 18px ${tagColor}99`; // Stronger shadow on hover
+  e.currentTarget.style.transform = "scale(1.06)";
+}}
+onMouseLeave={e => {
+  e.currentTarget.style.boxShadow =
+    tagColor.toLowerCase() === "#ffffff"
+      ? "0 2px 6px #bbb3"
+      : `0 2px 6px ${tagColor}55`;
+  e.currentTarget.style.transform = "scale(1)";
+}}
+
 >
   {tag.name}
 </span>
