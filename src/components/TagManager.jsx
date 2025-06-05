@@ -71,7 +71,7 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       height: 28,
       boxSizing: "border-box",
       display: "block",
-      top: "-3px"
+      top: "-10px"
     }}
   />
   <input
