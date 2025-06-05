@@ -14,7 +14,7 @@ function RenderEventContent(arg) {
         boxShadow: tagColor.toLowerCase() === "#ffffff"
           ? "0 2px 6px #bbb3"
           : `0 2px 6px ${tagColor}55`,
-        padding: "8px 14px",
+        padding: "2px 14px",
         borderRadius: borderRadius,
         fontSize: 14,
         fontWeight: 600,
