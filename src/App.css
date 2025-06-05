@@ -1,334 +1,151 @@
-/* Reset font globally */
-body, input, select, textarea, button {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: #ffffff;
-  margin: 0;
-  padding: 0;
-}
-
-/* Background and basic text. */
-body {
-  background-color: #1e1e1e;
-}
-
-/* Headings */
-h2 {
-  text-align: center;
-  color: #f97316;
-  margin: 20px 0;
-}
-
-/* Debug label styling */
-.debug-label {
-  padding: 10px 15px;
-  margin: 20px auto;
-  border-radius: 8px;
-  background-color: #2a2a2a;
-  width: fit-content;
-  color: #f0f0f0;
-  font-size: 14px;
-  font-family: monospace;
-  border-left: 4px solid #f97316;
-}
-
-/* FullCalendar base */
-.fc {
-  background-color: #1e1e1e;
+/* App.css – Modern Dark Theme with Orange Accent */
+body, #root, .App {
+  background: #181A20;
   color: #fff;
-  direction: ltr;
-  text-align: left;
+  font-family: 'Inter', 'Roboto', system-ui, sans-serif;
+  min-height: 100vh;
 }
 
-/* FullCalendar toolbar */
+.fc {
+  background: #22242b !important;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px 0 rgba(16,16,24,0.15);
+  padding: 24px 8px;
+}
+
 .fc .fc-toolbar {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 1em;
-  align-items: center;
+  background: transparent !important;
+  border-bottom: none !important;
+  margin-bottom: 10px;
 }
 
-/* FullCalendar buttons */
-.fc .fc-button {
-  background-color: #f97316 !important;
-  color: white !important;
+.fc .fc-button, .fc-button-primary {
+  background: #ff9100 !important;
   border: none !important;
-  border-radius: 4px !important;
-  padding: 0.5em 1em;
-  margin-right: 0.5em;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+  color: #181A20 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 8px 0 rgba(255,145,0,0.18);
+  transition: background 0.15s;
+}
+.fc .fc-button:hover, .fc-button-primary:hover {
+  background: #ffb74d !important;
+  color: #22242b !important;
 }
 
-.fc .fc-button:hover {
-  background-color: #fb923c !important;
+.fc .fc-daygrid-day, .fc .fc-timegrid-slot, .fc .fc-daygrid-event {
+  background: #24252d !important;
+  border-radius: 12px !important;
+  border: none !important;
 }
 
-.fc .fc-button-primary {
-  background-color: #f97316 !important;
+.fc .fc-daygrid-day.fc-day-today,
+.fc .fc-timegrid-col.fc-day-today {
+  background: #292929 !important;
+  box-shadow: 0 0 0 2px #ff9100 inset;
 }
 
-.fc .fc-button-primary:not(:disabled).fc-button-active,
-.fc .fc-button-primary:not(:disabled):active {
-  background-color: #ea580c !important;
+.fc-event, .fc-daygrid-event {
+  background: #ff9100 !important;
+  color: #181A20 !important;
+  border: none !important;
+  border-radius: 14px !important;
+  font-weight: 600;
+  box-shadow: 0 2px 6px 0 rgba(255,145,0,0.13);
+  margin-bottom: 2px;
+  padding: 2px 10px;
+  transition: background 0.15s;
+}
+.fc-event:hover, .fc-daygrid-event:hover {
+  background: #ffb74d !important;
+  color: #22242b !important;
 }
 
-/* Day grid */
 .fc .fc-daygrid-day-number {
-  color: #f97316;
-  padding: 4px;
-}
-
-.fc .fc-day-today {
-  background-color: #292929 !important;
-  border: 1px solid #f97316 !important;
-}
-
-/* Day cells border */
-.fc .fc-daygrid-day-frame {
-  border: 1px solid #2a2a2a;
-  min-height: 80px;
+  color: #ff9100 !important;
+  font-weight: 700;
 }
 
 .fc .fc-scrollgrid {
-  border: 1px solid #2a2a2a;
-}
-
-/* Column header color */
-.fc .fc-col-header-cell-cushion {
-  color: #ccc;
-}
-
-/* TimeGrid styles */
-.fc-timegrid-slot {
-  border-top: 1px solid #444;
-}
-
-.fc-timegrid-slot-label {
-  color: #999;
-}
-
-.fc-timegrid-event {
-  background-color: #444;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-size: 0.85em;
-}
-
-/* Past events styling */
-.fc-event.past-event {
-  opacity: 0.4 !important;
-  pointer-events: none !important;
-  user-select: none;
-  cursor: not-allowed !important;
-}
-
-/* Past date cells styling */
-.past-date-cell {
-  background-color: #2a2a2a !important;
-  color: #777 !important;
-  cursor: default !important;
-  user-select: none;
-}
-
-.past-date-cell .fc-daygrid-day-number {
-  opacity: 0.4 !important;
-  color: #777 !important;
-}
-
-/* FullCalendar events: remove default background & borders */
-.fc-event {
-  background: transparent !important;
   border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  cursor: pointer;
-}
-.fc-event-main {
-  width: 100%;
-  padding: 0 !important;
-  margin: 0 !important;
+  background: transparent !important;
 }
 
-/* Modal fade + scale */
-.modal-fade {
-  animation: fadeInScale 0.3s ease forwards;
-  transform-origin: center center;
+.fc .fc-col-header-cell {
+  background: transparent !important;
+  color: #ff9100 !important;
+  border-bottom: 2px solid #24252d !important;
 }
 
-@keyframes fadeInScale {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-/* Buttons */
-button {
-  transition: background-color 0.3s ease, transform 0.15s ease;
-  cursor: pointer;
-  border-radius: 4px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}
-
-button:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px);
-}
-
-button:active {
-  transform: translateY(0);
-  filter: brightness(0.9);
-}
-
-button:focus {
-  outline: 2px solid #f97316;
-  outline-offset: 2px;
-}
-
-/* Tag pill styling with gradient background set inline in React */
-.tag-pill {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-timegrid-slot-label-cushion {
+  color: #ff9100 !important;
   font-weight: 600;
-  user-select: none;
-  cursor: default;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Modal/dialog styles (example) */
+.modal, .modal-content {
+  background: #23252c;
   color: #fff;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
-}
-
-.tag-pill:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.calendar-tooltip-bubble {
-  background: #23272f;
-  color: #fff;
-  padding: 11px 17px;
-  border-radius: 9px;
-  box-shadow: 0 8px 36px 0 rgba(0,0,0,0.24), 0 1.5px 8px 0 rgba(0,0,0,0.09);
-  font-size: 13px;
-  min-width: 170px;
-  max-width: 300px;
-  pointer-events: none;
-  opacity: 0.97;
-  border: 1.5px solid #4b5563;
-}
-
-
-.calendar-tooltip-bubble::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -8px;
-  border-width: 8px;
-  border-style: solid;
-  border-color: #23272f transparent transparent transparent;
-}
-
-
-/* Tooltip improved style */
-.tooltip-custom {
-  position: absolute;
-  background: #2c2c2c;
-  color: #f9f9f9;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  max-width: 280px;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-  white-space: pre-line;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  z-index: 11000;
-}
-
-/* Tooltip arrow */
-.tooltip-custom::after {
-  content: "";
-  position: absolute;
-  bottom: -8px;
-  left: 20px;
-  border-width: 8px 8px 0 8px;
-  border-style: solid;
-  border-color: #2c2c2c transparent transparent transparent;
-}
-
-/* Inputs */
-input,
-textarea,
-select {
-  color: #111;               /* dark text for readability */
-  background-color: #eee;    /* light background */
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 8px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  transition: border-color 0.3s ease;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #999;               /* softer placeholder text */
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: #f97316;     /* highlight border on focus */
-  box-shadow: 0 0 6px #f97316aa;
-  background-color: #fff;
-  color: #111;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Delete button styling in modal */
-.modal-fade button.delete-event {
-  background-color: #b91c1c;
-  color: #fff;
+  border-radius: 24px;
+  box-shadow: 0 6px 24px 0 rgba(16,16,24,0.24);
+  padding: 28px 24px;
   border: none;
-  border-radius: 4px;
-  padding: 10px;
-  width: 100%;
-  margin-top: 12px;
-  cursor: pointer;
+}
+.modal-header {
+  border-bottom: 1px solid #2a2c33;
+}
+.modal-footer {
+  border-top: 1px solid #2a2c33;
+  text-align: right;
+}
+
+input, select, textarea {
+  background: #181A20;
+  border: 2px solid #333540;
+  border-radius: 16px;
+  color: #fff;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border: 2px solid #ff9100;
+  box-shadow: 0 0 0 2px #ff910040;
+}
+
+button, .btn, .fc-button {
+  background: #ff9100;
+  color: #181A20;
+  border: none;
+  border-radius: 16px;
+  padding: 10px 22px;
+  font-size: 1rem;
   font-weight: 600;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  transition: filter 0.3s ease, transform 0.15s ease;
-  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.6);
+  margin-top: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px 0 rgba(255,145,0,0.12);
+  transition: background 0.13s, box-shadow 0.12s;
+}
+button:hover, .btn:hover {
+  background: #ffb74d;
+  color: #22242b;
 }
 
-.modal-fade button.delete-event:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(185, 28, 28, 0.8);
+::-webkit-scrollbar {
+  width: 12px;
+  background: #22242b;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #ff9100;
+  border-radius: 8px;
 }
 
-.modal-fade button.delete-event:active {
-  filter: brightness(0.9);
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(185, 28, 28, 0.6);
+@media (max-width: 600px) {
+  .fc, .modal, .modal-content {
+    padding: 10px 3px;
+    border-radius: 14px;
+  }
 }
-
-.modal-fade button.delete-event:focus {
-  outline: 2px solid #f97316;
-  outline-offset: 2px;
-}
-
