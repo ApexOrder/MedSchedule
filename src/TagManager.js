@@ -25,7 +25,7 @@ function hexToRgb(hex) {
 
 const TagManager = ({ tags, setTags, channelId }) => {
   const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState("#3b82f6");
+  const [newColor, setNewColor] = useState("#ffffff");
 
   const addTagToFirestore = async (tag) => {
     await addDoc(collection(db, "tags"), tag);
