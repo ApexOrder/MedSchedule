@@ -108,14 +108,16 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      lineHeight: 1,
-      // Main trick:
-      padding: "0 16px",  // zero vertical padding, only horizontal
+      padding: "0 16px",
+      lineHeight: "28px",           // <--- KEY: matches height!
+      verticalAlign: "middle",      // <--- also helps alignment
+      boxSizing: "border-box"
     }}
   >
     Add Tag
   </button>
 </div>
+
 
 
 
