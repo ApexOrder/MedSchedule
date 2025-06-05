@@ -55,8 +55,20 @@ const App = () => {
     setNotificationDebug(["Fetching..."]);
     try {
       const res = await fetch("/api/sendNotifications");
-      const data = await res.json();
-      setNotificationDebug(data.debug || ["No debug info returned."]);
+const text = await res.text();
+let data;
+try {
+  data = JSON.parse(text);
+  setNotificationDebug(data.debug || ["No debug info returned."]);
+} catch (e) {
+  // Not JSON (probably HTML error page)
+  setNotificationDebug([
+    `Fetch error: ${e.message}`,
+    "Raw response:",
+    text.slice(0, 1000) // Show only first 1000 chars for safety
+  ]);
+}
+
     } catch (err) {
       setNotificationDebug([`Fetch error: ${err.message}`]);
     }
