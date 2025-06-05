@@ -41,20 +41,27 @@ const TagManager = ({ tags, setTags, channelId }) => {
   return (
     <div>
   {/* Input row: name, color, button */}
-  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+  <div style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+    width: "100%",
+  }}>
     <input
       placeholder="Tag name"
       value={newName}
       onChange={(e) => setNewName(e.target.value)}
       style={{
-        padding: "7px 10px",
+        padding: "6px 12px",
         borderRadius: 8,
         border: "1.5px solid #444",
         background: "#1c1d25",
         color: "#fff",
         fontSize: 14,
         outline: "none",
-        minWidth: 90
+        height: 38,
+        minWidth: 90,
       }}
     />
     <input
@@ -67,13 +74,13 @@ const TagManager = ({ tags, setTags, channelId }) => {
         border: "none",
         borderRadius: 8,
         background: "#222",
-        boxShadow: "0 2px 8px #0002"
+        boxShadow: "0 2px 8px #0002",
       }}
     />
     <button
       onClick={addTag}
       style={{
-        padding: "8px 16px",
+        padding: "7px 16px",
         borderRadius: 8,
         border: "none",
         background: "#f97316",
@@ -82,7 +89,10 @@ const TagManager = ({ tags, setTags, channelId }) => {
         fontSize: 15,
         cursor: "pointer",
         transition: "background 0.2s",
-        marginLeft: 4
+        height: 38,           // align with input
+        marginLeft: 0,
+        display: "flex",
+        alignItems: "center",
       }}
       onMouseEnter={e => (e.currentTarget.style.background = "#ff9100")}
       onMouseLeave={e => (e.currentTarget.style.background = "#f97316")}
@@ -91,8 +101,14 @@ const TagManager = ({ tags, setTags, channelId }) => {
     </button>
   </div>
 
-  {/* Tags display */}
-  <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8 }}>
+  {/* Tag Pills Below */}
+  <div style={{
+    marginTop: 8,
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 10,
+    minHeight: 30,
+  }}>
     {tags.map((tag) => {
       const tagColor = tag.color || "#3b82f6";
       return (
@@ -103,10 +119,8 @@ const TagManager = ({ tags, setTags, channelId }) => {
           style={{
             background: `linear-gradient(to right, rgba(${hexToRgb(tagColor)}, 0) 0%, ${tagColor} 100%)`,
             color: tagColor.toLowerCase() === "#ffffff" ? "#222" : "#fff",
-            marginRight: 0,
-            marginBottom: 0,
-            padding: "5px 14px",
-            borderRadius: 20,
+            padding: "3px 13px",
+            borderRadius: 16,
             fontSize: 13,
             fontWeight: 600,
             boxShadow: tagColor.toLowerCase() === "#ffffff"
@@ -116,7 +130,11 @@ const TagManager = ({ tags, setTags, channelId }) => {
             userSelect: "none",
             transition: "transform 0.18s, box-shadow 0.18s",
             fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
-            display: "inline-block",
+            display: "flex",
+            alignItems: "center",
+            marginRight: 0,
+            marginBottom: 0,
+            minHeight: 26,
           }}
           onMouseEnter={e => {
             e.currentTarget.style.boxShadow =
@@ -134,11 +152,35 @@ const TagManager = ({ tags, setTags, channelId }) => {
           }}
         >
           {tag.name}
+         <button
+            onClick={() => handleRemoveTag(tag.id)}
+            style={{
+              marginLeft: 9,
+              background: "none",
+              border: "none",
+              color: tagColor.toLowerCase() === "#ffffff" ? "#333" : "#fff",
+              fontSize: 17,
+              fontWeight: 400,
+              cursor: "pointer",
+              opacity: 0.55,
+              padding: 0,
+              lineHeight: 1,
+              height: 20,
+              width: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Delete tag"
+            onMouseEnter={e => (e.currentTarget.style.opacity = 1)}
+            onMouseLeave={e => (e.currentTarget.style.opacity = 0.55)}
+          >✕</button>
         </span>
       );
     })}
   </div>
 </div>
+
 
 
 export default TagManager;
