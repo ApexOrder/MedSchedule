@@ -148,7 +148,7 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       borderRadius: "50%",
       transition: "opacity 0.14s, color 0.14s",
       position: "relative",
-      top: "-1px",                // <<---- THIS LIFTS THE X UP SLIGHTLY
+      top: "-3px",                // <<---- THIS LIFTS THE X UP SLIGHTLY
     }}
     title="Delete tag"
     onClick={e => {
