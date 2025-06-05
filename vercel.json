@@ -1,0 +1,8 @@
+{
+  "cron": [
+    {
+      "path": "/api/sendNotifications",
+      "schedule": "*/1 * * * *"
+    }
+  ]
+}
