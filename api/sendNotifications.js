@@ -79,14 +79,19 @@ export default async function handler(req, res) {
 
   // For each event, send Teams notification
   for (const event of events) {
-    try {
-      await sendTeamsNotification(event.userEmail, event.title);
-      // (Optional) Mark event as notified, to avoid double sends
-      await db.collection("events").doc(event.id).update({ notified: true });
-    } catch (e) {
-      console.error(`Failed to notify for event ${event.title}:`, e);
-    }
+  try {
+    const email = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`;
+    await sendTeamsNotification(email, event.title, event.id);
+    await db.collection("events").doc(event.id).update({ notified: true });
+    sentCount++;
+  } catch (err) {
+    console.error(
+      `Failed to notify for event ${event.title} (${event.id}):`,
+      err.response ? err.response.data : err
+    );
   }
+}
+
 
   res.status(200).json({ sent: events.length });
 }
