@@ -7,7 +7,7 @@ import "../TagManager.css";
 
 const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
   const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState("#3b82f6");
+  const [newColor, setNewColor] = useState("#ffffff");
   const [isAdding, setIsAdding] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
