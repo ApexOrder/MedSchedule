@@ -69,8 +69,7 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       color: "#fff",
       fontSize: 13,
       height: 28,
-      boxSizing: "border-box",
-      display: "block"
+      boxSizing: "border-box"
     }}
   />
   <input
@@ -78,28 +77,40 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
     value={newColor}
     onChange={e => setNewColor(e.target.value)}
     style={{
-      width: 28, height: 28, borderRadius: 7,
-      border: "1px solid #555", background: "#fff", padding: 0,
-      display: "block"
+      width: 28,
+      height: 28,
+      borderRadius: 7,
+      border: "1px solid #555",
+      background: "#fff",
+      padding: 0
     }}
   />
   <button
     onClick={handleAddTag}
     disabled={isAdding}
     style={{
-      padding: "5px 14px", borderRadius: 7, border: "none",
-      background: "#f97316", color: "#fff", fontWeight: 600,
-      fontSize: 13, cursor: isAdding ? "wait" : "pointer",
-      transition: "filter 0.18s", opacity: isAdding ? 0.6 : 1,
+      padding: "5px 14px",
+      borderRadius: 7,
+      border: "none",
+      background: "#f97316",
+      color: "#fff",
+      fontWeight: 600,
+      fontSize: 13,
+      cursor: isAdding ? "wait" : "pointer",
+      transition: "filter 0.18s",
+      opacity: isAdding ? 0.6 : 1,
       height: 28,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      boxSizing: "border-box",
-      top: "-3px"
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxSizing: "border-box"
+      // REMOVE top: -3px!
     }}
   >
-    Add Tag2
+    Add Tag
   </button>
 </div>
+
 
 
 
