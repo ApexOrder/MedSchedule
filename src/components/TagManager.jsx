@@ -26,6 +26,7 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
     await addDoc(collection(db, "tags"), tag);
     debug(`[TagManager] Tag created.`);
     setNewName("");
+    setNewColor("#ffffff"); // <--- reset to white after adding
   } catch (err) {
     debug(`[TagManager] Failed to add tag: ${err.message}`);
   } finally {
