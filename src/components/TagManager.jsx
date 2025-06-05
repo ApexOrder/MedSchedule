@@ -91,31 +91,33 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
     }}
   />
   <button
-    onClick={handleAddTag}
-    disabled={isAdding}
-    style={{
-      borderRadius: 7,
-      border: "none",
-      background: "#f97316",
-      color: "#fff",
-      fontWeight: 600,
-      fontSize: 13,
-      cursor: isAdding ? "wait" : "pointer",
-      transition: "filter 0.18s",
-      opacity: isAdding ? 0.6 : 1,
-      height: 28,
-      minWidth: 75,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "0 16px",
-      lineHeight: "28px",           // <--- KEY: matches height!
-      verticalAlign: "middle",      // <--- also helps alignment
-      boxSizing: "border-box"
-    }}
-  >
-    Add Tag
-  </button>
+  onClick={handleAddTag}
+  disabled={isAdding}
+  style={{
+    borderRadius: 7,
+    border: "none",
+    background: "#f97316",
+    color: "#fff",
+    fontWeight: 600,
+    fontSize: 13,
+    cursor: isAdding ? "wait" : "pointer",
+    transition: "filter 0.18s",
+    opacity: isAdding ? 0.6 : 1,
+    height: 28,
+    minWidth: 75,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0 16px",
+    lineHeight: "28px",
+    marginTop: 0,     // <-- KEY FIX
+    marginBottom: 0,  // <-- KEY FIX
+    boxSizing: "border-box"
+  }}
+>
+  Add Tag
+</button>
+
 </div>
 
 
