@@ -113,69 +113,73 @@ const TagManager = ({ tags, setTags, channelId }) => {
       const tagColor = tag.color || "#3b82f6";
       return (
         <span
-          key={tag.id}
-          className="tag-pill"
-          title={tag.name}
-          style={{
-            background: `linear-gradient(to right, rgba(${hexToRgb(tagColor)}, 0) 0%, ${tagColor} 100%)`,
-            color: tagColor.toLowerCase() === "#ffffff" ? "#222" : "#fff",
-            padding: "3px 13px",
-            borderRadius: 16,
-            fontSize: 13,
-            fontWeight: 600,
-            boxShadow: tagColor.toLowerCase() === "#ffffff"
-              ? "0 2px 6px #bbb3"
-              : `0 2px 6px ${tagColor}55`,
-            cursor: "default",
-            userSelect: "none",
-            transition: "transform 0.18s, box-shadow 0.18s",
-            fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
-            display: "flex",
-            alignItems: "center",
-            marginRight: 0,
-            marginBottom: 0,
-            minHeight: 26,
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.boxShadow =
-              tagColor.toLowerCase() === "#ffffff"
-                ? "0 4px 18px #bbb4"
-                : `0 4px 18px ${tagColor}99`;
-            e.currentTarget.style.transform = "scale(1.06)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.boxShadow =
-              tagColor.toLowerCase() === "#ffffff"
-                ? "0 2px 6px #bbb3"
-                : `0 2px 6px ${tagColor}55`;
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-        >
-          {tag.name}
-         <button
-            onClick={() => handleRemoveTag(tag.id)}
-            style={{
-              marginLeft: 9,
-              background: "none",
-              border: "none",
-              color: tagColor.toLowerCase() === "#ffffff" ? "#333" : "#fff",
-              fontSize: 17,
-              fontWeight: 400,
-              cursor: "pointer",
-              opacity: 0.55,
-              padding: 0,
-              lineHeight: 1,
-              height: 20,
-              width: 20,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            title="Delete tag"
-            onMouseEnter={e => (e.currentTarget.style.opacity = 1)}
-            onMouseLeave={e => (e.currentTarget.style.opacity = 0.55)}
-          >✕</button>
-        </span>
+  key={tag.id}
+  className="tag-pill"
+  title={tag.name}
+  style={{
+    background: `linear-gradient(to right, rgba(${hexToRgb(tagColor)}, 0) 0%, ${tagColor} 100%)`,
+    color: tagColor.toLowerCase() === "#ffffff" ? "#222" : "#fff",
+    padding: "2px 11px",
+    borderRadius: 13,
+    fontSize: 12.5,
+    fontWeight: 600,
+    boxShadow: tagColor.toLowerCase() === "#ffffff"
+      ? "0 2px 6px #bbb3"
+      : `0 2px 6px ${tagColor}55`,
+    cursor: "default",
+    userSelect: "none",
+    transition: "transform 0.18s, box-shadow 0.18s",
+    fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
+    display: "flex",
+    alignItems: "center",
+    marginRight: 0,
+    marginBottom: 0,
+    minHeight: 22,
+    maxHeight: 28,
+  }}
+  onMouseEnter={e => {
+    e.currentTarget.style.boxShadow =
+      tagColor.toLowerCase() === "#ffffff"
+        ? "0 4px 18px #bbb4"
+        : `0 4px 18px ${tagColor}99`;
+    e.currentTarget.style.transform = "scale(1.05)";
+  }}
+  onMouseLeave={e => {
+    e.currentTarget.style.boxShadow =
+      tagColor.toLowerCase() === "#ffffff"
+        ? "0 2px 6px #bbb3"
+        : `0 2px 6px ${tagColor}55`;
+    e.currentTarget.style.transform = "scale(1)";
+  }}
+>
+  {tag.name}
+  <button
+    onClick={() => handleRemoveTag(tag.id)}
+    style={{
+      marginLeft: 8,
+      background: "none",
+      border: "none",
+      color: tagColor.toLowerCase() === "#ffffff" ? "#333" : "#fff",
+      fontSize: 14,
+      fontWeight: 400,
+      cursor: "pointer",
+      opacity: 0.6,
+      padding: 0,
+      lineHeight: 1,
+      height: 18,
+      width: 18,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "50%",
+      transition: "opacity 0.16s, background 0.16s",
+    }}
+    title="Delete tag"
+    onMouseEnter={e => (e.currentTarget.style.opacity = 1)}
+    onMouseLeave={e => (e.currentTarget.style.opacity = 0.6)}
+  >✕</button>
+</span>
+
       );
     })}
   </div>
