@@ -70,7 +70,8 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       fontSize: 13,
       height: 28,
       boxSizing: "border-box",
-      display: "block"
+      display: "block",
+      top: "-3px"
     }}
   />
   <input
