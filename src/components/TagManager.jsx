@@ -117,59 +117,63 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       {/* Tag Pills */}
       <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
   {tags.map((tag) => (
-    <span
-  key={tag.id}
-  style={{
-    background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
-    color: "#fff",
-    padding: "2px 12px 2px 12px",
-    borderRadius: 13,
-    fontSize: 12.5,
-    fontWeight: 600,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
-    userSelect: "none",
-    display: "inline-flex",
-    alignItems: "center",
-    minHeight: 22,
-    gap: 6,
-    opacity: deletingId === tag.id ? 0.5 : 1,
-    cursor: deletingId === tag.id ? "wait" : "default",
-    marginRight: 0,
-    marginBottom: 0,
-    transition: "transform 0.18s, box-shadow 0.18s",
-  }}
->
-  {tag.name}
-  <button
+  <span
+    key={tag.id}
+    className="tag-pill"
+    title={tag.name}
     style={{
-      marginLeft: 7,
-      background: "none",
-      border: "none",
+      background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
       color: "#fff",
-      cursor: deletingId === tag.id ? "wait" : "pointer",
-      fontSize: 15,               // <- slightly larger
-      fontWeight: 700,
-      opacity: deletingId === tag.id ? 0.4 : 0.7,
-      padding: 0,
-      height: 18,                 // keep short
-      width: 18,
-      display: "flex",
-      alignItems: "center",       // centers icon
-      justifyContent: "center",   // centers icon
-      lineHeight: 1,              // helps with vertical alignment
-      borderRadius: "50%",
-      transition: "opacity 0.14s, color 0.14s",
-      position: "relative",
-      top: "-3px",                // <<---- THIS LIFTS THE X UP SLIGHTLY
+      padding: "2px 11px",
+      borderRadius: 13,
+      fontSize: 12.5,
+      fontWeight: 600,
+      boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+      userSelect: "none",
+      display: "inline-flex",
+      alignItems: "center",
+      minHeight: 20,
+      gap: 6,
+      opacity: deletingId === tag.id ? 0.5 : 1,
+      cursor: deletingId === tag.id ? "wait" : "default",
+      marginRight: 0,
+      marginBottom: 0,
+      transition: "transform 0.18s, box-shadow 0.18s",
     }}
-    title="Delete tag"
-    onClick={e => {
-      e.stopPropagation();
-      handleDeleteTag(tag.id);
-    }}
-    disabled={deletingId === tag.id}
-  >✕</button>
-</span>
+  >
+    {tag.name}
+    <button
+      style={{
+        marginLeft: 7,
+        background: "none",
+        border: "none",
+        color: "#fff",
+        cursor: deletingId === tag.id ? "wait" : "pointer",
+        fontSize: 15,
+        fontWeight: 700,
+        opacity: deletingId === tag.id ? 0.4 : 0.7,
+        padding: 0,
+        height: 16,
+        width: 16,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+        borderRadius: "50%",
+        transition: "opacity 0.14s, color 0.14s",
+        position: "relative",
+        top: "-1px",
+      }}
+      title="Delete tag"
+      onClick={e => {
+        e.stopPropagation();
+        handleDeleteTag(tag.id);
+      }}
+      disabled={deletingId === tag.id}
+    >✕</button>
+  </span>
+))}
+
 
   ))}
 </div>
