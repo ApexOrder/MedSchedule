@@ -97,7 +97,7 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       top: "-3px"
     }}
   >
-    Add Tag
+    Add Tag2
   </button>
 </div>
 
