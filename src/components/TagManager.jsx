@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import hexToRgb from "../utils/hexToRgb";
+import "./TagManager.css";
+
 
 const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
   const [newName, setNewName] = useState("");
