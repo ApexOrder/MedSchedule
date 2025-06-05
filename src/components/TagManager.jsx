@@ -93,6 +93,7 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
     }}
   />
   <button
+  className="modal-add-tag-btn"
   onClick={handleAddTag}
   disabled={isAdding}
   style={{
