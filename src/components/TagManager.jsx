@@ -55,7 +55,12 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
   return (
     <div>
       {/* Add Tag Form */}
-      <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+     <div style={{
+  marginBottom: 14,
+  display: "flex",
+  alignItems: "center",
+  gap: 10
+}}>
   <input
     placeholder="Tag name"
     value={newName}
@@ -89,7 +94,6 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
     onClick={handleAddTag}
     disabled={isAdding}
     style={{
-      padding: "5px 14px",
       borderRadius: 7,
       border: "none",
       background: "#f97316",
@@ -100,16 +104,19 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       transition: "filter 0.18s",
       opacity: isAdding ? 0.6 : 1,
       height: 28,
+      minWidth: 75,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      boxSizing: "border-box"
-      // REMOVE top: -3px!
+      lineHeight: 1,
+      // Main trick:
+      padding: "0 16px",  // zero vertical padding, only horizontal
     }}
   >
     Add Tag
   </button>
 </div>
+
 
 
 
