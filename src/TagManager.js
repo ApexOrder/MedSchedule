@@ -77,14 +77,14 @@ const TagManager = ({ tags, setTags, channelId }) => {
   title={tag.name}
   style={{
     background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
-    color: "#fff",
+    color: tag.color.toLowerCase() === "#ffffff" ? "#222" : "#fff", // <-- NEW
     marginRight: 6,
     marginBottom: 6,
     padding: "6px 14px",
     borderRadius: 20,
     fontSize: 13,
     fontWeight: 600,
-    boxShadow: `0 2px 6px ${tag.color}55`, // <<<<< updated line
+    boxShadow: `0 2px 6px ${tag.color}55`,
     cursor: "default",
     userSelect: "none",
     transition: "transform 0.3s ease, box-shadow 0.3s ease",
@@ -93,15 +93,16 @@ const TagManager = ({ tags, setTags, channelId }) => {
   }}
   onMouseEnter={(e) => {
     e.currentTarget.style.transform = "scale(1.1)";
-    e.currentTarget.style.boxShadow = `0 4px 12px ${tag.color}99`; // <<<<< updated line
+    e.currentTarget.style.boxShadow = `0 4px 12px ${tag.color}99`;
   }}
   onMouseLeave={(e) => {
     e.currentTarget.style.transform = "scale(1)";
-    e.currentTarget.style.boxShadow = `0 2px 6px ${tag.color}55`; // <<<<< updated line
+    e.currentTarget.style.boxShadow = `0 2px 6px ${tag.color}55`;
   }}
 >
   {tag.name}
 </span>
+
 
         ))}
       </div>
