@@ -530,55 +530,74 @@ const App = () => {
 
       {/* Tag Manager Modal */}
       {showTagManager && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: "rgba(25,28,38,0.78)",
-            backdropFilter: "blur(2px)",
-            zIndex: 2222,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            animation: "fadeIn 0.2s",
-          }}
-          onClick={() => setShowTagManager(false)}
-        >
-          <div
-            style={{
-              background: "#232338",
-              borderRadius: 18,
-              minWidth: 360,
-              maxWidth: 420,
-              width: "96vw",
-              boxShadow: "0 12px 32px #0007",
-              padding: 28,
-              position: "relative",
-              animation: "scalePop 0.19s",
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowTagManager(false)}
-              style={{
-                position: "absolute",
-                top: 10, right: 10,
-                background: "none",
-                color: "#fff",
-                fontSize: 20,
-                border: "none",
-                cursor: "pointer",
-                opacity: 0.7,
-              }}
-              title="Close"
-            >✕</button>
-            <h3 style={{ color: "#f97316", margin: 0, marginBottom: 16, textAlign: "center" }}>
-              Manage Tags
-            </h3>
-            <TagManager tags={tags} setTags={setTags} channelId={channelId} debug={debug} />
-          </div>
-        </div>
-      )}
+  <div
+    style={{
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(25,28,38,0.82)",
+      backdropFilter: "blur(2px)",
+      zIndex: 2222,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      animation: "fadeIn 0.2s",
+    }}
+    onClick={() => setShowTagManager(false)}
+  >
+    <div
+      style={{
+        background: "#232338",
+        borderRadius: 20,
+        minWidth: 340,
+        maxWidth: 420,
+        width: "94vw",
+        boxShadow: "0 12px 32px #0007",
+        padding: "30px 32px 24px 32px",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+        alignItems: "center"
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* Close button */}
+      <button
+        onClick={() => setShowTagManager(false)}
+        style={{
+          position: "absolute",
+          top: 15, right: 18,
+          background: "none",
+          color: "#fff",
+          fontSize: 22,
+          border: "none",
+          cursor: "pointer",
+          opacity: 0.65,
+          transition: "opacity 0.15s",
+        }}
+        title="Close"
+        onMouseEnter={e => (e.currentTarget.style.opacity = 1)}
+        onMouseLeave={e => (e.currentTarget.style.opacity = 0.65)}
+      >✕</button>
+
+      <h3 style={{
+        color: "#f97316",
+        margin: 0,
+        textAlign: "center",
+        fontSize: 22,
+        fontWeight: 700,
+        letterSpacing: 0.2,
+      }}>
+        Manage Tags
+      </h3>
+
+      <div style={{ width: "100%" }}>
+        <TagManager tags={tags} setTags={setTags} channelId={channelId} debug={debug} />
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* User display */}
       <div style={{
