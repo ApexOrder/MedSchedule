@@ -70,8 +70,7 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       fontSize: 13,
       height: 28,
       boxSizing: "border-box",
-      display: "block",
-      top: "-10px"
+      display: "block"
     }}
   />
   <input
@@ -94,7 +93,8 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
       transition: "filter 0.18s", opacity: isAdding ? 0.6 : 1,
       height: 28,
       display: "flex", alignItems: "center", justifyContent: "center",
-      boxSizing: "border-box"
+      boxSizing: "border-box",
+      top: "-3px"
     }}
   >
     Add Tag
