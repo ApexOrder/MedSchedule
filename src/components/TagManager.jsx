@@ -55,42 +55,47 @@ const TagManager = ({ tags, setTags, channelId, debug = () => {} }) => {
   return (
     <div>
       {/* Add Tag Form */}
-      <div style={{ marginBottom: 14, display: "flex", gap: 8 }}>
-        <input
-          placeholder="Tag name"
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-          style={{
-            padding: "7px 8px",
-            borderRadius: 7,
-            border: "1px solid #555",
-            minWidth: 70,
-            background: "#242436",
-            color: "#fff",
-          }}
-        />
-        <input
-          type="color"
-          value={newColor}
-          onChange={e => setNewColor(e.target.value)}
-          style={{
-            width: 36, height: 32, borderRadius: 8,
-            border: "1px solid #555", background: "#fff", padding: 0
-          }}
-        />
-        <button
-          onClick={handleAddTag}
-          disabled={isAdding}
-          style={{
-            padding: "7px 16px", borderRadius: 7, border: "none",
-            background: "#f97316", color: "#fff", fontWeight: 600,
-            fontSize: 14, cursor: isAdding ? "wait" : "pointer",
-            transition: "filter 0.18s", opacity: isAdding ? 0.6 : 1,
-          }}
-        >
-          Add Tag
-        </button>
-      </div>
+      <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+  <input
+    placeholder="Tag name"
+    value={newName}
+    onChange={e => setNewName(e.target.value)}
+    style={{
+      padding: "6px 10px",
+      borderRadius: 7,
+      border: "1px solid #555",
+      minWidth: 70,
+      background: "#242436",
+      color: "#fff",
+      fontSize: 13,
+      height: 28,
+    }}
+  />
+  <input
+    type="color"
+    value={newColor}
+    onChange={e => setNewColor(e.target.value)}
+    style={{
+      width: 28, height: 28, borderRadius: 7,
+      border: "1px solid #555", background: "#fff", padding: 0
+    }}
+  />
+  <button
+    onClick={handleAddTag}
+    disabled={isAdding}
+    style={{
+      padding: "6px 14px", borderRadius: 7, border: "none",
+      background: "#f97316", color: "#fff", fontWeight: 600,
+      fontSize: 13, cursor: isAdding ? "wait" : "pointer",
+      transition: "filter 0.18s", opacity: isAdding ? 0.6 : 1,
+      height: 28,
+      display: "flex", alignItems: "center",
+    }}
+  >
+    Add Tag
+  </button>
+</div>
+
 
       {/* Tag Pills */}
       <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8 }}>
