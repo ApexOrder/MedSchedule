@@ -72,36 +72,37 @@ const TagManager = ({ tags, setTags, channelId }) => {
       <div style={{ marginTop: 10 }}>
         {tags.map((tag) => (
           <span
-            key={tag.id}
-            className="tag-pill"
-            title={tag.name}
-            style={{
-              background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
-              color: "#fff",
-              marginRight: 6,
-              marginBottom: 6,
-              padding: "6px 14px",
-              borderRadius: 20,
-              fontSize: 13,
-              fontWeight: 600,
-              boxShadow: `0 2px 6px ${tag.color}55`, // 55 is ~33% opacity for hex
-              cursor: "default",
-              userSelect: "none",
-              transition: "transform 0.3s ease, box-shadow 0.3s ease",
-              fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
-              display: "inline-block",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.1)";
-              e.currentTarget.style.boxShadow = `0 4px 12px ${tag.color}99`; // 99 is ~60% opacity
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
-            }}
-          >
-            {tag.name}
-          </span>
+  key={tag.id}
+  className="tag-pill"
+  title={tag.name}
+  style={{
+    background: `linear-gradient(to right, rgba(${hexToRgb(tag.color)}, 0) 0%, ${tag.color} 100%)`,
+    color: "#fff",
+    marginRight: 6,
+    marginBottom: 6,
+    padding: "6px 14px",
+    borderRadius: 20,
+    fontSize: 13,
+    fontWeight: 600,
+    boxShadow: `0 2px 6px ${tag.color}55`, // <<<<< updated line
+    cursor: "default",
+    userSelect: "none",
+    transition: "transform 0.3s ease, box-shadow 0.3s ease",
+    fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif",
+    display: "inline-block",
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.transform = "scale(1.1)";
+    e.currentTarget.style.boxShadow = `0 4px 12px ${tag.color}99`; // <<<<< updated line
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.transform = "scale(1)";
+    e.currentTarget.style.boxShadow = `0 2px 6px ${tag.color}55`; // <<<<< updated line
+  }}
+>
+  {tag.name}
+</span>
+
         ))}
       </div>
     </div>
