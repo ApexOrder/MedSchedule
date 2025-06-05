@@ -57,7 +57,7 @@ body, #root, .App {
 }
 .fc-event:hover, .fc-daygrid-event:hover {
   /* No color or background change */
-  /*box-shadow: 0 4px 14px 0 rgba(255, 145, 0, 0.19), 0 2px 8px rgba(0,0,0,0.10);*/
+  box-shadow: 0 4px 14px 0 rgba(255, 145, 0, 0.19), 0 2px 8px rgba(0,0,0,0.10);
   transform: scale(1.03);
   z-index: 2;
   transition: box-shadow 0.13s, transform 0.13s;
