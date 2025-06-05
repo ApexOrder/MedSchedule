@@ -8,8 +8,10 @@ function RenderEventContent(arg) {
       className="event-pill"
       style={{
         background: `linear-gradient(to right, rgba(${hexToRgb(tagColor)}, 0) 0%, ${tagColor} 100%)`,
-        color: color === "#ffffff" ? "#222" : "#fff",
-        boxShadow: color === "#ffffff" ? "0 2px 6px #bbb3" : `0 2px 6px ${color}55`,
+        color: tagColor.toLowerCase() === "#ffffff" ? "#222" : "#fff",
+        boxShadow: tagColor.toLowerCase() === "#ffffff"
+          ? "0 2px 6px #bbb3"
+          : `0 2px 6px ${tagColor}55`,
         padding: "8px 14px",
         borderRadius: 16,
         fontSize: 14,
