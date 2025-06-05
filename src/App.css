@@ -46,11 +46,11 @@ body, #root, .App {
 
 .fc-event, .fc-daygrid-event {
   /*background: #ff9100 !important;*/
-  color: #181A20 !important;
+  color: inherit !important;
   border: none !important;
-  border-radius: 14px !important;
+  border-radius: 0px !important;
   font-weight: 600;
- /* box-shadow: 0 2px 6px 0 rgba(255,145,0,0.13);*/
+  box-shadow: none;
   margin-bottom: 2px;
   padding: 2px 10px;
   transition: background 0.15s;
