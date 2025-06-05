@@ -16,6 +16,9 @@ const App = () => {
   const [authDebug, setAuthDebug] = useState([]);
   const [showDebug, setShowDebug] = useState(false);
 
+  const [notificationDebug, setNotificationDebug] = useState([]); // NEW
+  const [fetchingNotifDebug, setFetchingNotifDebug] = useState(false); // NEW
+
   const [events, setEvents] = useState([]);
   const [tags, setTags] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -45,6 +48,20 @@ const App = () => {
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
   const debug = (msg) =>
     setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
+
+  // NEW: Function to fetch notification cron debug log
+  const fetchNotificationDebug = async () => {
+    setFetchingNotifDebug(true);
+    setNotificationDebug(["Fetching..."]);
+    try {
+      const res = await fetch("/api/sendNotifications");
+      const data = await res.json();
+      setNotificationDebug(data.debug || ["No debug info returned."]);
+    } catch (err) {
+      setNotificationDebug([`Fetch error: ${err.message}`]);
+    }
+    setFetchingNotifDebug(false);
+  };
 
   // MS Teams Context/Auth
   useEffect(() => {
@@ -530,74 +547,73 @@ const App = () => {
 
       {/* Tag Manager Modal */}
       {showTagManager && (
-  <div
-    style={{
-      position: "fixed",
-      top: 0, left: 0, right: 0, bottom: 0,
-      background: "rgba(25,28,38,0.82)",
-      backdropFilter: "blur(2px)",
-      zIndex: 2222,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      animation: "fadeIn 0.2s",
-    }}
-    onClick={() => setShowTagManager(false)}
-  >
-    <div
-      style={{
-        background: "#232338",
-        borderRadius: 20,
-        minWidth: 340,
-        maxWidth: 420,
-        width: "94vw",
-        boxShadow: "0 12px 32px #0007",
-        padding: "30px 32px 24px 32px",
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        gap: 18,
-        alignItems: "center"
-      }}
-      onClick={e => e.stopPropagation()}
-    >
-      {/* Close button */}
-      <button
-        onClick={() => setShowTagManager(false)}
-        style={{
-          position: "absolute",
-          top: 15, right: 18,
-          background: "none",
-          color: "#fff",
-          fontSize: 22,
-          border: "none",
-          cursor: "pointer",
-          opacity: 0.65,
-          transition: "opacity 0.15s",
-        }}
-        title="Close"
-        onMouseEnter={e => (e.currentTarget.style.opacity = 1)}
-        onMouseLeave={e => (e.currentTarget.style.opacity = 0.65)}
-      >✕</button>
+        <div
+          style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(25,28,38,0.82)",
+            backdropFilter: "blur(2px)",
+            zIndex: 2222,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "fadeIn 0.2s",
+          }}
+          onClick={() => setShowTagManager(false)}
+        >
+          <div
+            style={{
+              background: "#232338",
+              borderRadius: 20,
+              minWidth: 340,
+              maxWidth: 420,
+              width: "94vw",
+              boxShadow: "0 12px 32px #0007",
+              padding: "30px 32px 24px 32px",
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+              gap: 18,
+              alignItems: "center"
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowTagManager(false)}
+              style={{
+                position: "absolute",
+                top: 15, right: 18,
+                background: "none",
+                color: "#fff",
+                fontSize: 22,
+                border: "none",
+                cursor: "pointer",
+                opacity: 0.65,
+                transition: "opacity 0.15s",
+              }}
+              title="Close"
+              onMouseEnter={e => (e.currentTarget.style.opacity = 1)}
+              onMouseLeave={e => (e.currentTarget.style.opacity = 0.65)}
+            >✕</button>
 
-      <h3 style={{
-        color: "#f97316",
-        margin: 0,
-        textAlign: "center",
-        fontSize: 22,
-        fontWeight: 700,
-        letterSpacing: 0.2,
-      }}>
-        Manage Tags
-      </h3>
+            <h3 style={{
+              color: "#f97316",
+              margin: 0,
+              textAlign: "center",
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: 0.2,
+            }}>
+              Manage Tags
+            </h3>
 
-      <div style={{ width: "100%" }}>
-        <TagManager tags={tags} setTags={setTags} channelId={channelId} debug={debug} />
-      </div>
-    </div>
-  </div>
-)}
-
+            <div style={{ width: "100%" }}>
+              <TagManager tags={tags} setTags={setTags} channelId={channelId} debug={debug} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* User display */}
       <div style={{
@@ -615,7 +631,7 @@ const App = () => {
       </div>
 
       {/* Debug Window */}
-      {showDebug && authDebug.length > 0 && (
+      {showDebug && (
         <div
           style={{
             background: "#3a3a3a",
@@ -626,13 +642,36 @@ const App = () => {
             margin: "20px auto",
             maxWidth: 950,
             minHeight: 80,
-            maxHeight: 250,
+            maxHeight: 350,
             overflowY: "auto",
             boxShadow: "0 6px 30px #0003"
           }}
         >
           <strong>🔧 Auth Debug Log:</strong>
           <pre style={{ whiteSpace: "pre-wrap", marginTop: 5 }}>{authDebug.join("\n")}</pre>
+          <button
+            onClick={fetchNotificationDebug}
+            disabled={fetchingNotifDebug}
+            style={{
+              marginTop: 12,
+              background: "#35386a",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "6px 18px",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer"
+            }}
+          >
+            {fetchingNotifDebug ? "Fetching..." : "Fetch Notification Debug"}
+          </button>
+          {notificationDebug.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <strong>🕓 Notification Cron Debug:</strong>
+              <pre style={{ whiteSpace: "pre-wrap" }}>{notificationDebug.join("\n")}</pre>
+            </div>
+          )}
         </div>
       )}
 
