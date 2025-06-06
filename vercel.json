@@ -1,9 +1,0 @@
-{
-  "functions": {
-    "api/sendNotifications.js": {
-      "memory": 128,
-      "maxDuration": 10,
-      "cron": "22 * * * *"
-    }
-  }
-}
