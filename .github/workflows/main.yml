@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Call API Endpoint
         run: |
-          curl -X POST https://med-schedule-theta.vercel.app/api/sendNotifications -H "Authorization: Bearer YOUR_TOKEN" -H "Content-Type: application/json" -d '{"key":"value"}'
+          curl -X POST https://med-schedule-theta.vercel.app/api/sendNotifications -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}"" -H "Content-Type: application/json" -d '{"key":"value"}'
