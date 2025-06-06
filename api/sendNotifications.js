@@ -1,4 +1,4 @@
-// @vercel/cron: "31 * * * *"
+// @vercel/cron: "35 * * * *"
 
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const axios = require("axios");
