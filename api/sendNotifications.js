@@ -48,7 +48,7 @@ async function sendTeamsNotification(email, eventTitle) {
     {
       topic: {
         source: "entityUrl",
-        value: "https://your-app-url/" // Change to your app/event URL if you want
+        value: "https://med-schedule-theta.vercel.app/" // Change to your app/event URL if you want
       },
       activityType: "eventReminder",
       previewText: {
