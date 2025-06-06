@@ -1,5 +1,3 @@
-// @vercel/cron: "35 16 * * *"
-
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const axios = require("axios");
@@ -64,37 +62,58 @@ async function sendTeamsNotification(email, eventTitle) {
 }
 
 module.exports = async function handler(req, res) {
-  // This job runs at 16:35 daily, so check for events in a +/- 1min window
-  const now = Date.now();
-  const oneMinuteAgo = now - 60 * 1000;
-  const oneMinuteAhead = now + 60 * 1000;
+  const debug = [];
+  try {
+    // This job runs at 16:35 daily, so check for events in a +/- 1min window
+    const now = Date.now();
+    const oneMinuteAgo = now - 60 * 1000;
+    const oneMinuteAhead = now + 60 * 1000;
+    debug.push(
+      `Time window: ${new Date(oneMinuteAgo).toISOString()} to ${new Date(oneMinuteAhead).toISOString()}`
+    );
 
-  // Query Firestore for events starting ~now
-  const snapshot = await db
-    .collection("events")
-    .where("start", ">=", new Date(oneMinuteAgo))
-    .where("start", "<=", new Date(oneMinuteAhead))
-    .get();
+    // Query Firestore for events starting ~now
+    const snapshot = await db
+      .collection("events")
+      .where("start", ">=", new Date(oneMinuteAgo))
+      .where("start", "<=", new Date(oneMinuteAhead))
+      .get();
 
-  const events = [];
-  snapshot.forEach((doc) => events.push({ id: doc.id, ...doc.data() }));
+    const events = [];
+    snapshot.forEach((doc) => events.push({ id: doc.id, ...doc.data() }));
 
-  let sentCount = 0;
-  let errors = [];
+    debug.push(`Found ${events.length} events in time window.`);
+    let sentCount = 0;
+    let errors = [];
 
-  // For each event, send Teams notification
-  for (const event of events) {
-    try {
-      const email = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`;
-      await sendTeamsNotification(email, event.title, event.id);
-      await db.collection("events").doc(event.id).update({ notified: true });
-      sentCount++;
-    } catch (err) {
-      errors.push(
-        `Failed to notify for event ${event.title} (${event.id}): ${err.response ? JSON.stringify(err.response.data) : err.message}`
-      );
+    // For each event, send Teams notification
+    for (const event of events) {
+      try {
+        const email = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`;
+        await sendTeamsNotification(email, event.title, event.id);
+        await db.collection("events").doc(event.id).update({ notified: true });
+        debug.push(`✅ Notified for event "${event.title}" (${event.id})`);
+        sentCount++;
+      } catch (err) {
+        const errMsg = `❌ Failed for event "${event.title}" (${event.id}): ${
+          err.response ? JSON.stringify(err.response.data) : err.message
+        }`;
+        debug.push(errMsg);
+        errors.push(errMsg);
+      }
     }
-  }
 
-  res.status(200).json({ sent: sentCount, checked: events.length, errors });
+    debug.push(`Sent ${sentCount} notifications.`);
+    if (errors.length) debug.push("Errors:").concat(errors);
+
+    res.status(200).json({
+      sent: sentCount,
+      checked: events.length,
+      errors,
+      debug,
+    });
+  } catch (error) {
+    debug.push(`Server error: ${error.message}`);
+    res.status(500).json({ sent: 0, checked: 0, errors: [error.message], debug });
+  }
 };
