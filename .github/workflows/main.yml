@@ -1,14 +1,14 @@
-name: Scheduled API Call
+name: Scheduled Notification
 
 on:
   schedule:
-    # Runs every day at 7:00 AM UTC
-    - cron: '40 * * * *'
+    - cron: '50 * * * *' # At minute 50 of every hour (UTC)
+  workflow_dispatch:    # Allow manual runs too
 
 jobs:
-  call_api:
+  notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Call API Endpoint
+      - name: Curl Vercel Endpoint
         run: |
-          curl -X POST https://med-schedule-theta.vercel.app/api/sendNotifications -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}"" -H "Content-Type: application/json" -d '{"key":"value"}'
+          curl -X GET https://med-schedule-theta.vercel.app/api/sendNotifications
