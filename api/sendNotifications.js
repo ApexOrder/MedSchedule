@@ -1,6 +1,5 @@
-
-
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 const axios = require("axios");
 
 if (!getApps().length) {
@@ -12,6 +11,8 @@ if (!getApps().length) {
 } else {
   console.log("[INIT] Firebase app already initialized.");
 }
+
+const db = getFirestore();
 
 const tenantId = process.env.MS_TENANT_ID;
 const clientId = process.env.MS_CLIENT_ID;
@@ -32,22 +33,20 @@ async function getGraphToken() {
   return response.data.access_token;
 }
 
-// Sends a debug notification to YOUR Teams feed every run
-async function sendDebugTeamsNotification(userId, deepLink) {
+async function sendTeamsNotification(userId, deepLink, eventTitle, eventNotes) {
   const token = await getGraphToken();
-
-  const debugMsg = `DEBUG: Cron ran at ${new Date().toLocaleTimeString()}`;
-  console.log(`[NOTIFY] Sending Teams debug notification to ${userId} at ${debugMsg}`);
+  const eventMsg = `Reminder: "${eventTitle}" scheduled today.` + (eventNotes ? `\nNotes: ${eventNotes}` : "");
+  console.log(`[NOTIFY] Sending Teams event notification to ${userId}: ${eventMsg}`);
   await axios.post(
     `https://graph.microsoft.com/v1.0/users/${userId}/teamwork/sendActivityNotification`,
     {
       topic: {
         source: "text",
-        value: "Care Calendar Debug",
+        value: "Care Calendar Event",
         webUrl: deepLink,
       },
       activityType: "systemDefault",
-      previewText: { content: debugMsg },
+      previewText: { content: eventMsg },
       recipient: {
         "@odata.type": "microsoft.graph.aadUserNotificationRecipient",
         userId,
@@ -55,13 +54,13 @@ async function sendDebugTeamsNotification(userId, deepLink) {
       templateParameters: [
         {
           name: "systemDefaultText",
-          value: debugMsg,
+          value: eventMsg,
         },
       ],
     },
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  console.log("[NOTIFY] Debug notification sent successfully!");
+  console.log("[NOTIFY] Event notification sent successfully!");
 }
 
 module.exports = async function handler(req, res) {
@@ -70,17 +69,57 @@ module.exports = async function handler(req, res) {
   console.log(`[RUN] Handler started at ${now.toISOString()}`);
 
   try {
-    // Fire debug notification EVERY time
-    await sendDebugTeamsNotification(
-      "0b652ebb-b452-4369-869b-fc227bb7f48b",
-      "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc"
-    );
-    debug.push("✅ Debug notification sent to Teams Activity feed.");
+    // Get today's date string (YYYY-MM-DD)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+    debug.push(`Checking for events on: ${todayStr}`);
+
+    // Query Firestore for today's events
+    const snapshot = await db
+      .collection("events")
+      .where("date", "==", todayStr)
+      .get();
+
+    const events = [];
+    snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
+
+    debug.push(`Found ${events.length} event(s) for today.`);
+
+    let sentCount = 0;
+    let errors = [];
+
+    for (const event of events) {
+      try {
+        // Construct user email or ID
+        const userId = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`; // adjust as needed
+        const deepLink =
+          "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc";
+
+        await sendTeamsNotification(userId, deepLink, event.title, event.notes || "");
+        debug.push(`✅ Notified "${event.title}" for ${userId}`);
+        sentCount++;
+      } catch (err) {
+        const errMsg = `❌ Failed "${event.title}" for user: ${err.message}`;
+        debug.push(errMsg);
+        errors.push(errMsg);
+        console.error(errMsg, err);
+      }
+    }
+
+    debug.push(`Sent ${sentCount} notifications.`);
+
+    if (errors.length) {
+      debug.push("Errors:");
+      debug.push(...errors);
+    }
+
     console.log(`[END] Handler completed at ${new Date().toISOString()}`);
     res.status(200).json({
       debug,
-      status: "Notification sent.",
+      status: `Notifications sent: ${sentCount}`,
       time: new Date().toISOString(),
+      errors,
     });
   } catch (error) {
     debug.push(`❌ Error sending notification: ${error.message}`);
