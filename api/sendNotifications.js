@@ -2,7 +2,6 @@ const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const axios = require("axios");
 
-// Only initialize Firebase once
 if (!getApps().length) {
   initializeApp({
     credential: cert(JSON.parse(process.env.FIREBASE_ADMIN_JSON)),
@@ -61,45 +60,57 @@ async function sendTeamsNotification(email, eventTitle) {
 module.exports = async function handler(req, res) {
   const debug = [];
   try {
-    // Today's date string (YYYY-MM-DD)
+    // Get today's date string (YYYY-MM-DD)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split("T")[0];
     debug.push(`Checking for events on: ${todayStr}`);
 
-    // Query Firestore for events with start/date matching today
-    // Change "start" to your field name if it's "date" instead
+    // Query all events scheduled for today (across all channels)
     const snapshot = await db
       .collection("events")
-      .where("date", "==", todayStr)
+      .where("start", "==", todayStr)
       .get();
 
     const events = [];
     snapshot.forEach((doc) => events.push({ id: doc.id, ...doc.data() }));
 
-    debug.push(`Found ${events.length} events scheduled for today.`);
+    // Group by channelId
+    const eventsByChannel = {};
+    for (const event of events) {
+      const ch = event.channelId || "unknown";
+      if (!eventsByChannel[ch]) eventsByChannel[ch] = [];
+      eventsByChannel[ch].push(event);
+    }
 
+    debug.push(`Found ${events.length} total events for today.`);
     let sentCount = 0;
     let errors = [];
 
-    for (const event of events) {
-      try {
-        const email = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`;
-        await sendTeamsNotification(email, event.title, event.id);
-        await db.collection("events").doc(event.id).update({ notified: true });
-        debug.push(`✅ Notified for event "${event.title}" (${event.id})`);
-        sentCount++;
-      } catch (err) {
-        const errMsg = `❌ Failed for event "${event.title}" (${event.id}): ${
-          err.response ? JSON.stringify(err.response.data) : err.message
-        }`;
-        debug.push(errMsg);
-        errors.push(errMsg);
+    for (const [channelId, channelEvents] of Object.entries(eventsByChannel)) {
+      debug.push(`Channel: ${channelId} (${channelEvents.length} events)`);
+      for (const event of channelEvents) {
+        try {
+          const email = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`;
+          await sendTeamsNotification(email, event.title, event.id);
+          await db.collection("events").doc(event.id).update({ notified: true });
+          debug.push(`✅ Notified "${event.title}" (${event.id}) in channel ${channelId}`);
+          sentCount++;
+        } catch (err) {
+          const errMsg = `❌ Failed "${event.title}" (${event.id}) in channel ${channelId}: ${
+            err.response ? JSON.stringify(err.response.data) : err.message
+          }`;
+          debug.push(errMsg);
+          errors.push(errMsg);
+        }
       }
     }
 
     debug.push(`Sent ${sentCount} notifications.`);
-    if (errors.length) debug.push("Errors:").concat(errors);
+    if (errors.length) {
+      debug.push("Errors:");
+      debug.push(...errors);
+    }
 
     res.status(200).json({
       sent: sentCount,
