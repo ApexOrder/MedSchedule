@@ -71,7 +71,7 @@ module.exports = async function handler(req, res) {
     // Change "start" to your field name if it's "date" instead
     const snapshot = await db
       .collection("events")
-      .where("start", "==", todayStr)
+      .where("date", "==", todayStr)
       .get();
 
     const events = [];
