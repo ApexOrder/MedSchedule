@@ -10,12 +10,10 @@ if (!getApps().length) {
 }
 const db = getFirestore();
 
-// Microsoft Graph setup
 const tenantId = process.env.MS_TENANT_ID;
 const clientId = process.env.MS_CLIENT_ID;
 const clientSecret = process.env.MS_CLIENT_SECRET;
 
-// Get MS Graph Token
 async function getGraphToken() {
   const response = await axios.post(
     `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
@@ -29,7 +27,6 @@ async function getGraphToken() {
   return response.data.access_token;
 }
 
-// Send Teams Notification
 async function sendTeamsNotification(email, eventTitle) {
   const token = await getGraphToken();
 
@@ -50,7 +47,7 @@ async function sendTeamsNotification(email, eventTitle) {
       },
       activityType: "eventReminder",
       previewText: {
-        content: `Reminder: "${eventTitle}" starts now`,
+        content: `Reminder: "${eventTitle}" is scheduled for today`,
       },
       recipient: {
         "@odata.type": "microsoft.graph.aadUserNotificationRecipient",
@@ -64,29 +61,27 @@ async function sendTeamsNotification(email, eventTitle) {
 module.exports = async function handler(req, res) {
   const debug = [];
   try {
-    // This job runs at 16:35 daily, so check for events in a +/- 1min window
-    const now = Date.now();
-    const oneMinuteAgo = now - 60 * 1000;
-    const oneMinuteAhead = now + 60 * 1000;
-    debug.push(
-      `Time window: ${new Date(oneMinuteAgo).toISOString()} to ${new Date(oneMinuteAhead).toISOString()}`
-    );
+    // Today's date string (YYYY-MM-DD)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split("T")[0];
+    debug.push(`Checking for events on: ${todayStr}`);
 
-    // Query Firestore for events starting ~now
+    // Query Firestore for events with start/date matching today
+    // Change "start" to your field name if it's "date" instead
     const snapshot = await db
       .collection("events")
-      .where("start", ">=", new Date(oneMinuteAgo))
-      .where("start", "<=", new Date(oneMinuteAhead))
+      .where("start", "==", todayStr)
       .get();
 
     const events = [];
     snapshot.forEach((doc) => events.push({ id: doc.id, ...doc.data() }));
 
-    debug.push(`Found ${events.length} events in time window.`);
+    debug.push(`Found ${events.length} events scheduled for today.`);
+
     let sentCount = 0;
     let errors = [];
 
-    // For each event, send Teams notification
     for (const event of events) {
       try {
         const email = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`;
