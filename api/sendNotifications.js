@@ -4,7 +4,7 @@
 
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import axios from "axios";
+const axios = require("axios");
 
 // Only initialize once (Vercel hot reload)
 if (!getApps().length) {
