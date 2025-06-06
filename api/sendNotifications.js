@@ -15,6 +15,7 @@ const tenantId = process.env.MS_TENANT_ID;
 const clientId = process.env.MS_CLIENT_ID;
 const clientSecret = process.env.MS_CLIENT_SECRET;
 
+// Helper: get Graph API token
 async function getGraphToken() {
   const response = await axios.post(
     `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
@@ -28,17 +29,51 @@ async function getGraphToken() {
   return response.data.access_token;
 }
 
-async function sendTeamsNotification(email, eventTitle) {
+// NEW: Teams notification with full customisation for debug
+async function sendTeamsDebugNotification(userId, debugText) {
   const token = await getGraphToken();
 
-  // Get the user's ID from email using Graph API
+  // Replace this with your real Teams tab link (deep link) if you have it
+  const webUrl = "https://teams.microsoft.com/l/entity/72934a41-9161-4502-9a56-3f9809fb305d/med-schedule-tab-id";
+
+  // Teams notification for debug
+  await axios.post(
+    `https://graph.microsoft.com/v1.0/users/${userId}/teamwork/sendActivityNotification`,
+    {
+      topic: {
+        source: "text",
+        value: "Care Calendar",
+        webUrl,
+      },
+      activityType: "systemDefault",
+      previewText: {
+        content: debugText,
+      },
+      recipient: {
+        "@odata.type": "microsoft.graph.aadUserNotificationRecipient",
+        userId: userId,
+      },
+      templateParameters: [
+        {
+          name: "systemDefaultText",
+          value: debugText,
+        },
+      ],
+    },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+}
+
+// Your old sendTeamsNotification for event reminders (can be left as is)
+async function sendTeamsNotification(email, eventTitle) {
+  const token = await getGraphToken();
   const userRes = await axios.get(
     `https://graph.microsoft.com/v1.0/users/${email}`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   const userId = userRes.data.id;
 
-  // Send notification
+  // ... (you could swap this to the same payload style as above for consistency)
   await axios.post(
     `https://graph.microsoft.com/v1.0/users/${userId}/teamwork/sendActivityNotification`,
     {
@@ -62,10 +97,22 @@ async function sendTeamsNotification(email, eventTitle) {
 module.exports = async function handler(req, res) {
   const debug = [];
   try {
+    // Send debug notification to YOURSELF on every cron run!
+    const testUserId = "0b652ebb-b452-4369-869b-fc227bb7f48b"; // <--- Replace with your real object ID!
+    const now = new Date();
+    const debugMsg = `DEBUG: Cron ran at ${now.toLocaleTimeString()}`;
+    try {
+      await sendTeamsDebugNotification(testUserId, debugMsg);
+      debug.push(`✅ Sent debug notification: "${debugMsg}"`);
+    } catch (err) {
+      debug.push(`❌ Failed to send debug notification: ${err.message}`);
+    }
+
+    // ---- Your original notification/event logic ----
+
     // Get today's date string (YYYY-MM-DD)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split("T")[0];
+    now.setHours(0, 0, 0, 0);
+    const todayStr = now.toISOString().split("T")[0];
     debug.push(`Checking for events on: ${todayStr}`);
 
     // Query all events scheduled for today (across all channels)
