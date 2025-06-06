@@ -1,4 +1,4 @@
-// @vercel/cron: "*/1 * * * *"
+// @vercel/cron: "* * * * *"
 
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
