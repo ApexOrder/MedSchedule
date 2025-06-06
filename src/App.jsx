@@ -45,6 +45,16 @@ const App = () => {
     channelId: null,
   });
 
+  const fetchAccessToken = async () => {
+  const res = await fetch('/api/debugToken');
+  const data = await res.json();
+  if (data.access_token) {
+    debug("🔓 Current Graph access token:\n" + data.access_token);
+  } else {
+    debug("❌ Failed to get token: " + (data.error || "Unknown error"));
+  }
+};
+  
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
   const debug = (msg) =>
     setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
@@ -475,6 +485,7 @@ try {
       >
         {showDebug ? "Hide Debug" : "Show Debug"}
       </button>
+      <button onClick={fetchAccessToken} style={{marginLeft:10}}>Show App Access Token</button>
 
       <h2 style={{
         color: "#f97316",
