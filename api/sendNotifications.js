@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
     // Query all events scheduled for today (across all channels)
     const snapshot = await db
       .collection("events")
-      .where("start", "==", todayStr)
+      .where("date", "==", todayStr)
       .get();
 
     const events = [];
