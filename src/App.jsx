@@ -54,7 +54,7 @@ const App = () => {
     setFetchingNotifDebug(true);
     setNotificationDebug(["Fetching..."]);
     try {
-      const res = await fetch("/api/axiosTest");
+      const res = await fetch("/api/sendNotifications");
 const text = await res.text();
 let data;
 try {
