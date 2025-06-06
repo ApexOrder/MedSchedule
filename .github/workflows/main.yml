@@ -3,7 +3,7 @@ name: Scheduled API Call
 on:
   schedule:
     # Runs every day at 7:00 AM UTC
-    - cron: '35 * * * *'
+    - cron: '40 * * * *'
 
 jobs:
   call_api:
