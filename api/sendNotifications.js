@@ -1,5 +1,7 @@
 // @vercel/cron: "0 * * * *"
 
+console.log(`[CRON-DEBUG] This should appear for every scheduled run: ${new Date().toISOString()}`);
+
 const { initializeApp, cert, getApps } = require("firebase-admin/app");
 const axios = require("axios");
 
