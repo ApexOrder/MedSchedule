@@ -22,6 +22,7 @@ const mapEventsToFullCalendar = (events, tags) => {
         createdByUser: evt.createdByUser, // <--- add this!
         tagName: evt.tagName,
         tagColor: tagColor,
+        completed: evt.completed, // <-- Make sure this line is present!
       },
     };
   });
