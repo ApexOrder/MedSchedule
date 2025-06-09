@@ -738,7 +738,7 @@ const App = () => {
       background: "rgba(30,32,44,0.77)",
       zIndex: 2000,
       display: "flex",
-      alignItems: "flex-start", // top
+      alignItems: "flex-start",
       justifyContent: "center",
       overflowY: "auto",
     }}
@@ -746,7 +746,7 @@ const App = () => {
   >
     <div
       style={{
-        marginTop: 48, // how far down from top
+        marginTop: 48,
         maxWidth: 420,
         minWidth: 330,
         width: "98vw",
