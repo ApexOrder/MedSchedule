@@ -88,8 +88,10 @@ body, #root, .App {
   opacity: 0.97;
   font-weight: 500;
   transition: opacity 0.13s;
-  max-width: auto;
+  max-width: 500px;
+  min-width: 300px;
   overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Arrow below the tooltip */
