@@ -33,7 +33,7 @@ const CalendarWrapper = ({
   handleEventClick,
   eventsKey,
   debug,
-  eventDidMount,
+  eventDidMount, // <-- NEW!
 }) => {
   // Only recalculate when the list of events actually changes
   const fullCalendarEvents = useMemo(() => {
@@ -61,6 +61,7 @@ const CalendarWrapper = ({
         eventDisplay="block"
         fixedWeekCount={false}
         eventContent={RenderEventContent}
+        eventDidMount={eventDidMount}   // <-- ADD THIS!
       />
     </div>
   );
