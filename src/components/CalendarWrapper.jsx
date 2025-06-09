@@ -19,6 +19,7 @@ const mapEventsToFullCalendar = (events, tags) => {
       extendedProps: {
         notes: evt.notes,
         createdBy: evt.createdBy,
+        createdByUser: evt.createdByUser, // <--- add this!
         tagName: evt.tagName,
         tagColor: tagColor,
       },
