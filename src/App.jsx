@@ -15,7 +15,6 @@ import hexToRgb from "./utils/hexToRgb";
 import "./App.css";
 
 const App = () => {
-  const [showTodayToast, setShowTodayToast] = useState(false);
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
   const [showDebug, setShowDebug] = useState(false);
@@ -200,16 +199,7 @@ function getTodayEventsByTag(events, tags) {
       unsubscribeTags();
     };
   }, [channelId]);
-
-  useEffect(() => {
-  const url = new URL(window.location.href);
-  const showToday = url.searchParams.get("showTodayEvents");
-
-  if (showToday) {
-    setShowTodayToast(true);
-    setTimeout(() => setShowTodayToast(false), 5000); // auto-dismiss
-  }
-}, []);
+ []);
 
 
 
@@ -825,23 +815,7 @@ function getTodayEventsByTag(events, tags) {
             info.el.removeAttribute("title");
           }}
         />
-        {showTodayToast && (
-  <div style={{
-    position: "fixed",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "#333",
-    color: "#fff",
-    padding: "14px 18px",
-    borderRadius: "6px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-    zIndex: 1000
-  }}>
-    🛎️ You have events today.
-  </div>
-)}
-
-      </div>
+       </div>
     </div>
   );
 };
