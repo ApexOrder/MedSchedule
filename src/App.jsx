@@ -52,6 +52,19 @@ const App = () => {
     completed: false,
   });
 
+  // Utility to group today's events by tag
+function getTodayEventsByTag(events, tags) {
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayEvents = events.filter(e => e.date === todayStr);
+  // Group by tagName, fallback to 'Untagged'
+  return todayEvents.reduce((acc, evt) => {
+    const tag = evt.tagName || "Untagged";
+    if (!acc[tag]) acc[tag] = [];
+    acc[tag].push(evt);
+    return acc;
+  }, {});
+}
+  
   const fetchAccessToken = async () => {
     const res = await fetch('/api/debugToken');
     const data = await res.json();
@@ -184,6 +197,15 @@ const App = () => {
       unsubscribeTags();
     };
   }, [channelId]);
+
+  useEffect(() => {
+  // Open the modal if the query string has showTodayEvents
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("showTodayEvents")) {
+    setShowTodaysModal(true);
+  }
+}, []);
+
 
   // Helper to check if a date is in the past
   const isPastDate = (dateStr) => {
