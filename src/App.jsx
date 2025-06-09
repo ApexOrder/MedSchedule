@@ -824,6 +824,22 @@ function getTodayEventsByTag(events, tags) {
             info.el.removeAttribute("title");
           }}
         />
+        {showTodayToast && (
+  <div style={{
+    position: "fixed",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "#333",
+    color: "#fff",
+    padding: "14px 18px",
+    borderRadius: "6px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+    zIndex: 1000
+  }}>
+    🛎️ You have events today.
+  </div>
+)}
+
       </div>
     </div>
   );
