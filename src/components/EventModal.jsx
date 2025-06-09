@@ -116,6 +116,16 @@ const EventModal = ({
           />
         </div>
       )}
+      <label style={{ display: "flex", alignItems: "center", gap: 8, margin: "10px 0 0 0" }}>
+  <input
+    type="checkbox"
+    checked={newEvent.completed || false}
+    onChange={e => setNewEvent(prev => ({ ...prev, completed: e.target.checked }))}
+    style={{ width: 18, height: 18, accentColor: "#ff9100" }}
+  />
+  <span style={{ fontSize: 15, color: "#fff" }}>Mark as completed</span>
+</label>
+
       <label style={{ color: "#fff", display: "block", marginBottom: 4 }}>
         Event Tag:
       </label>
