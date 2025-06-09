@@ -34,12 +34,7 @@ async function getGraphToken() {
   return response.data.access_token;
 }
 
-async function sendTeamsNotification(userId, deepLink, tag, eventsList, token) {
-  let message = `Events for tag: **${tag}**\n\n`;
-  eventsList.forEach(evt => {
-    message += `• **${evt.title}**${evt.notes ? `: ${evt.notes}` : ""}\n`;
-  });
-
+async function sendTeamsNotification(userId, deepLink, message, token) {
   await axios.post(
     `https://graph.microsoft.com/v1.0/users/${userId}/teamwork/sendActivityNotification`,
     {
@@ -63,28 +58,24 @@ async function sendTeamsNotification(userId, deepLink, tag, eventsList, token) {
 module.exports = async function handler(req, res) {
   const debug = [];
   try {
-    // Prepare date string
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split("T")[0];
     debug.push(`Checking for events on: ${todayStr}`);
 
-    // Query events for today
+    // Query all events for today
     const snapshot = await db.collection("events").where("date", "==", todayStr).get();
     const events = [];
     snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
     debug.push(`Found ${events.length} event(s) for today.`);
 
-    // Group events by user and tag
-    // Structure: { [email]: { [tagName]: [events] } }
+    // Group all events by user email
     const grouped = {};
     for (const evt of events) {
       const email = evt.createdBy;
-      const tag = evt.tagName || "Untagged";
       if (!email) continue;
-      if (!grouped[email]) grouped[email] = {};
-      if (!grouped[email][tag]) grouped[email][tag] = [];
-      grouped[email][tag].push(evt);
+      if (!grouped[email]) grouped[email] = [];
+      grouped[email].push(evt);
     }
 
     let sentCount = 0;
@@ -100,29 +91,41 @@ module.exports = async function handler(req, res) {
         errors.push(err.message);
         continue;
       }
-      for (const tag of Object.keys(grouped[email])) {
-        const eventsList = grouped[email][tag];
-        // Add your deepLink logic (customize as needed)
-        const deepLink = "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc";
+      // Compose message: group events by tag
+      const byTag = {};
+      grouped[email].forEach(evt => {
+        const tag = evt.tagName || "Untagged";
+        if (!byTag[tag]) byTag[tag] = [];
+        byTag[tag].push(evt);
+      });
 
-        try {
-          await sendTeamsNotification(userId, deepLink, tag, eventsList, token);
-          debug.push(`✅ Notified ${email} for tag "${tag}" with ${eventsList.length} event(s)`);
-          sentCount++;
-        } catch (err) {
-          const errMsg = `❌ Notification failed for ${email}, tag "${tag}": ${err.message}`;
-          debug.push(errMsg);
-          errors.push(errMsg);
-        }
+      let message = `Care Calendar events for today:\n`;
+      Object.entries(byTag).forEach(([tag, events]) => {
+        events.forEach(evt => {
+          message += `▸ [${tag}] ${evt.title}${evt.notes ? ": " + evt.notes : ""}\n`;
+        });
+      });
+
+      // Change this to match your Teams tab entity/URL/modal if you want modal open
+      const deepLink = "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc";
+
+      try {
+        await sendTeamsNotification(userId, deepLink, message, token);
+        debug.push(`✅ Notified ${email} with ${grouped[email].length} event(s)`);
+        sentCount++;
+      } catch (err) {
+        const errMsg = `❌ Notification failed for ${email}: ${err.message}`;
+        debug.push(errMsg);
+        errors.push(errMsg);
       }
     }
 
-    debug.push(`Sent ${sentCount} grouped notifications.`);
+    debug.push(`Sent ${sentCount} user notifications.`);
     if (errors.length) debug.push("Errors:", ...errors);
 
     res.status(200).json({
       debug,
-      status: `Grouped notifications sent: ${sentCount}`,
+      status: `User notifications sent: ${sentCount}`,
       time: new Date().toISOString(),
       errors,
     });
