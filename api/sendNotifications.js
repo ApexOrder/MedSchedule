@@ -18,6 +18,18 @@ const tenantId = process.env.MS_TENANT_ID;
 const clientId = process.env.MS_CLIENT_ID;
 const clientSecret = process.env.MS_CLIENT_SECRET;
 
+// Helper to get userId from email
+async function getUserIdByEmail(email, token) {
+  const userRes = await axios.get(
+    `https://graph.microsoft.com/v1.0/users?$filter=mail eq '${email}'`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (userRes.data.value.length === 0) {
+    throw new Error(`User not found in Azure AD for email: ${email}`);
+  }
+  return userRes.data.value[0].id;
+}
+
 async function getGraphToken() {
   console.log("[TOKEN] Requesting Microsoft Graph token...");
   const response = await axios.post(
@@ -33,8 +45,7 @@ async function getGraphToken() {
   return response.data.access_token;
 }
 
-async function sendTeamsNotification(userId, deepLink, eventTitle, eventNotes) {
-  const token = await getGraphToken();
+async function sendTeamsNotification(userId, deepLink, eventTitle, eventNotes, token) {
   const eventMsg = `Reminder: "${eventTitle}" scheduled today.` + (eventNotes ? `\nNotes: ${eventNotes}` : "");
   console.log(`[NOTIFY] Sending Teams event notification to ${userId}: ${eventMsg}`);
   await axios.post(
@@ -88,19 +99,25 @@ module.exports = async function handler(req, res) {
 
     let sentCount = 0;
     let errors = [];
+    const token = await getGraphToken(); // Only fetch ONCE per run
 
     for (const event of events) {
       try {
-        // Construct user email or ID
-        const userId = `${event.username}@RelianceCommunityCare007.onmicrosoft.com`; // adjust as needed
+        // Use 'createdBy' as the user's email (must exist in Azure AD)
+        const userEmail = event.createdBy;
+        if (!userEmail) {
+          throw new Error(`Event "${event.title}" is missing createdBy email.`);
+        }
+        const userId = await getUserIdByEmail(userEmail, token);
+
         const deepLink =
           "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc";
 
-        await sendTeamsNotification(userId, deepLink, event.title, event.notes || "");
-        debug.push(`✅ Notified "${event.title}" for ${userId}`);
+        await sendTeamsNotification(userId, deepLink, event.title, event.notes || "", token);
+        debug.push(`✅ Notified "${event.title}" for ${userEmail}`);
         sentCount++;
       } catch (err) {
-        const errMsg = `❌ Failed "${event.title}" for user: ${err.message}`;
+        const errMsg = `❌ Failed "${event.title}": ${err.message}`;
         debug.push(errMsg);
         errors.push(errMsg);
         console.error(errMsg, err);
