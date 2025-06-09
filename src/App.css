@@ -44,11 +44,16 @@ body, #root, .App {
   box-shadow: 0 0 0 2px #ff9100 inset !important; /* <-- Add this line */
 }
 
-/* Fade past date numbers to a lighter orange (faded effect) */
-.fc .fc-daygrid-day-past .fc-daygrid-day-number {
-  color: #ff910060 !important; /* #ff9100 at 38% opacity (or tweak as needed) */
+/* Dim and disable interaction for past days */
+.fc .fc-daygrid-day-past {
+  pointer-events: none;         /* Disable all interaction */
+  opacity: 0.5;                 /* Dim the whole cell */
+  cursor: not-allowed !important;
 }
 
+.fc .fc-daygrid-day-past .fc-daygrid-day-number {
+  color: #888 !important;       /* Subtle grey */
+}
 
 .fc-event, .fc-daygrid-event {
   /*background: #ff9100 !important;*/
