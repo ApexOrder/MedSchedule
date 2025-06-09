@@ -44,20 +44,20 @@ body, #root, .App {
   box-shadow: 0 0 0 2px #ff9100 inset !important; /* <-- Add this line */
 }
 
-/* For dayGrid views (month grid) */
+/* Past dates in dayGrid (month) view */
 .fc .fc-daygrid-day-past {
-  pointer-events: none;
-  opacity: 0.5;
+  pointer-events: none !important;
+  opacity: 0.5 !important;
   cursor: not-allowed !important;
 }
 .fc .fc-daygrid-day-past .fc-daygrid-day-number {
   color: #888 !important;
 }
 
-/* For timeGrid views (week/day slots) */
+/* Past columns in timeGrid (week/day) view */
 .fc .fc-timegrid-col-past {
-  pointer-events: none;
-  opacity: 0.5;
+  pointer-events: none !important;
+  opacity: 0.5 !important;
   cursor: not-allowed !important;
 }
 .fc .fc-timegrid-col-past .fc-timegrid-axis-cushion,
