@@ -725,13 +725,25 @@ try {
       {/* Calendar */}
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
-          events={events}
-          tags={tags}
-          handleDateClick={handleDateClick}
-          handleEventClick={handleEventClick}
-          eventsKey={eventsKey}
-          debug={debug}
-        />
+  events={events}
+  tags={tags}
+  handleDateClick={handleDateClick}
+  handleEventClick={handleEventClick}
+  eventsKey={eventsKey}
+  debug={debug}
+  eventDidMount={info => {
+    // Grab notes and format the tooltip
+    const notes = info.event.extendedProps.notes;
+    info.el.setAttribute(
+      "data-tooltip",
+      notes
+        ? `${info.event.title}\n${notes}`
+        : info.event.title
+    );
+    info.el.removeAttribute("title"); // Remove default browser tooltip
+  }}
+/>
+
       </div>
     </div>
   );
