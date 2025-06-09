@@ -730,6 +730,33 @@ const App = () => {
       )}
 
       {/* Event Modal */}
+      {showModal && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(30,32,44,0.77)",
+      zIndex: 2000,
+      display: "flex",
+      alignItems: "flex-start", // top
+      justifyContent: "center",
+      overflowY: "auto",
+    }}
+    onClick={() => setShowModal(false)}
+  >
+    <div
+      style={{
+        marginTop: 48, // how far down from top
+        maxWidth: 420,
+        minWidth: 330,
+        width: "98vw",
+        borderRadius: 18,
+        boxShadow: "0 12px 32px #000a",
+        background: "#232338",
+        position: "relative",
+      }}
+      onClick={e => e.stopPropagation()}
+    >
       <EventModal
         show={showModal}
         newEvent={newEvent}
@@ -743,6 +770,10 @@ const App = () => {
         handleDeleteEvent={requestDeleteEvent}
         handleDeleteSeries={requestDeleteSeries}
       />
+    </div>
+  </div>
+)}
+
 
       {/* Calendar */}
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
