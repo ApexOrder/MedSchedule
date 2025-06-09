@@ -8,7 +8,8 @@ import TagManager from "./components/TagManager";
 import EventModal from "./components/EventModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import CalendarWrapper from "./components/CalendarWrapper";
-import TodaysEventsModal from "./components/TodaysEventsModal";
+const [showTodayToast, setShowTodayToast] = useState(false);
+
 
 import hexToRgb from "./utils/hexToRgb";
 import "./App.css";
@@ -30,7 +31,6 @@ const App = () => {
   const [isPastEvent, setIsPastEvent] = useState(false);
   const [channelId, setChannelId] = useState(null);
   const [showTagManager, setShowTagManager] = useState(false);
-  const [showTodaysModal, setShowTodaysModal] = useState(false);
 
 
   // Add lastEditedBy everywhere newEvent exists
@@ -203,17 +203,13 @@ function getTodayEventsByTag(events, tags) {
   useEffect(() => {
   const url = new URL(window.location.href);
   const showToday = url.searchParams.get("showTodayEvents");
-  if (showToday) {
-    setShowTodaysModal(true);
-  }
 
-  // Also support Teams subEntityId context
-  app.getContext().then((context) => {
-    if (context?.subEntityId === "showTodayEvents") {
-      setShowTodaysModal(true);
-    }
-  });
+  if (showToday) {
+    setShowTodayToast(true);
+    setTimeout(() => setShowTodayToast(false), 5000); // auto-dismiss
+  }
 }, []);
+
 
 
   // Helper to check if a date is in the past
@@ -809,41 +805,6 @@ function getTodayEventsByTag(events, tags) {
 
 
       {/* Calendar */}
-      {showTodaysModal && (
-  <div style={{
-    position: "fixed",
-    top: 0,
-    right: 0,
-    width: "400px",
-    height: "100%",
-    background: "#1e1e2f",
-    color: "#fff",
-    zIndex: 1000,
-    boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.4)",
-    padding: "20px",
-    overflowY: "auto",
-    transition: "transform 0.3s ease-in-out",
-  }}>
-    <h2 style={{ marginTop: 0 }}>🗓 Today’s Events</h2>
-    {/* Render your events for today here */}
-    <button
-      onClick={() => setShowTodaysModal(false)}
-      style={{
-        marginTop: 20,
-        padding: "6px 12px",
-        background: "#444",
-        color: "#fff",
-        border: "none",
-        borderRadius: 4,
-        cursor: "pointer"
-      }}
-    >
-      Close
-    </button>
-  </div>
-)}
-
-
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
           events={events}
