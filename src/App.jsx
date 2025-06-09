@@ -8,13 +8,14 @@ import TagManager from "./components/TagManager";
 import EventModal from "./components/EventModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import CalendarWrapper from "./components/CalendarWrapper";
-const [showTodayToast, setShowTodayToast] = useState(false);
+
 
 
 import hexToRgb from "./utils/hexToRgb";
 import "./App.css";
 
 const App = () => {
+  const [showTodayToast, setShowTodayToast] = useState(false);
   const [user, setUser] = useState(null);
   const [authDebug, setAuthDebug] = useState([]);
   const [showDebug, setShowDebug] = useState(false);
