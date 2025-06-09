@@ -47,6 +47,28 @@ const EventModal = ({
         onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
         style={{ width: "100%", marginBottom: 10, padding: 8, borderRadius: 4, border: "1px solid #555" }}
       />
+      {newEvent.lastEdited && (
+  <div style={{
+    color: "#ccc",
+    fontSize: 13,
+    marginTop: 8,
+    marginBottom: 6,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  }}>
+    <span role="img" aria-label="clock" style={{ fontSize: 15 }}>🕒</span>
+    Last edited:{" "}
+    {new Date(newEvent.lastEdited).toLocaleString([], { 
+      year: "numeric", 
+      month: "short", 
+      day: "numeric", 
+      hour: "2-digit", 
+      minute: "2-digit" 
+    })}
+  </div>
+)}
+
       {selectedEventId !== null && newEvent.isRecurring && (
         <div style={{ marginBottom: 10, color: "#fff" }}>
           <label style={{ marginRight: 12 }}>
