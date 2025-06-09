@@ -66,8 +66,14 @@ const EventModal = ({
       hour: "2-digit", 
       minute: "2-digit" 
     })}
+    {newEvent.lastEditedBy && (
+      <>
+        {" "}by <span style={{ color: "#fff" }}>{newEvent.lastEditedBy}</span>
+      </>
+    )}
   </div>
 )}
+
 
       {selectedEventId !== null && newEvent.isRecurring && (
         <div style={{ marginBottom: 10, color: "#fff" }}>
