@@ -8,6 +8,8 @@ import TagManager from "./components/TagManager";
 import EventModal from "./components/EventModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import CalendarWrapper from "./components/CalendarWrapper";
+import TodaysEventsModal from "./components/TodaysEventsModal";
+
 import hexToRgb from "./utils/hexToRgb";
 import "./App.css";
 
