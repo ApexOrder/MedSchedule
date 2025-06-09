@@ -41,8 +41,14 @@ body, #root, .App {
 .fc .fc-daygrid-day.fc-day-today,
 .fc .fc-timegrid-col.fc-day-today {
   background: #292929 !important;
-  /*box-shadow: 0 0 0 2px #ff9100 inset;*/
+  box-shadow: 0 0 0 2px #ff9100 inset !important; /* <-- Add this line */
 }
+
+/* Fade past date numbers to a lighter orange (faded effect) */
+.fc .fc-daygrid-day-past .fc-daygrid-day-number {
+  color: #ff910060 !important; /* #ff9100 at 38% opacity (or tweak as needed) */
+}
+
 
 .fc-event, .fc-daygrid-event {
   /*background: #ff9100 !important;*/
