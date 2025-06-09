@@ -88,7 +88,7 @@ body, #root, .App {
   opacity: 0.97;
   font-weight: 500;
   transition: opacity 0.13s;
-  max-width: 400px;
+  max-width: auto;
   overflow-wrap: break-word;
 }
 
