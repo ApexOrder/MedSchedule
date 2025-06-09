@@ -107,7 +107,7 @@ module.exports = async function handler(req, res) {
       });
 
       // Change this to match your Teams tab entity/URL/modal if you want modal open
-      const deepLink = "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc";
+      const deepLink = "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc&webUrl=https://carecalendar.vercel.app/?showTodayEvents=1";
 
       try {
         await sendTeamsNotification(userId, deepLink, message, token);
