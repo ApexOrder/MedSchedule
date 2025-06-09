@@ -809,11 +809,40 @@ function getTodayEventsByTag(events, tags) {
 
 
       {/* Calendar */}
-      <TodaysEventsModal
-  show={showTodaysModal}
-  eventsByTag={getTodayEventsByTag(events, tags)}
-  onClose={() => setShowTodaysModal(false)}
-/>
+      {showTodaysModal && (
+  <div style={{
+    position: "fixed",
+    top: 0,
+    right: 0,
+    width: "400px",
+    height: "100%",
+    background: "#1e1e2f",
+    color: "#fff",
+    zIndex: 1000,
+    boxShadow: "-2px 0 8px rgba(0, 0, 0, 0.4)",
+    padding: "20px",
+    overflowY: "auto",
+    transition: "transform 0.3s ease-in-out",
+  }}>
+    <h2 style={{ marginTop: 0 }}>🗓 Today’s Events</h2>
+    {/* Render your events for today here */}
+    <button
+      onClick={() => setShowTodaysModal(false)}
+      style={{
+        marginTop: 20,
+        padding: "6px 12px",
+        background: "#444",
+        color: "#fff",
+        border: "none",
+        borderRadius: 4,
+        cursor: "pointer"
+      }}
+    >
+      Close
+    </button>
+  </div>
+)}
+
 
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
