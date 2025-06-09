@@ -18,6 +18,33 @@ body, #root, .App {
   margin-bottom: 10px;
 }
 
+/* Dark theme for FullCalendar's "more events" popover */
+.fc-popover {
+  background: #232338 !important;
+  color: #fff !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 30px #000b;
+  border: 1px solid #35386a !important;
+}
+.fc-popover .fc-popover-header {
+  background: #181828 !important;
+  color: #f97316 !important;
+  border-bottom: 1px solid #35386a !important;
+  border-radius: 18px 18px 0 0 !important;
+}
+.fc-popover .fc-popover-body {
+  background: #232338 !important;
+  color: #fff !important;
+  border-radius: 0 0 18px 18px !important;
+}
+.fc-popover .fc-event {
+  background: linear-gradient(to right, #35386a22, #f973161a);
+  color: #fff;
+  border-radius: 14px;
+  margin-bottom: 5px;
+}
+
+
 .fc .fc-button, .fc-button-primary {
   background: #ff9100 !important;
   border: none !important;
