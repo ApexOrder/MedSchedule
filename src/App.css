@@ -44,26 +44,18 @@ body, #root, .App {
   box-shadow: 0 0 0 2px #ff9100 inset !important; /* <-- Add this line */
 }
 
-/* Past dates in dayGrid (month) view */
-.fc .fc-daygrid-day-past {
+/* Make past dates unclickable and faded */
+.fc-day-past {
   pointer-events: none !important;
   opacity: 0.5 !important;
   cursor: not-allowed !important;
 }
-.fc .fc-daygrid-day-past .fc-daygrid-day-number {
+
+/* Change past date numbers to grey */
+.fc-day-past .fc-daygrid-day-number {
   color: #888 !important;
 }
 
-/* Past columns in timeGrid (week/day) view */
-.fc .fc-timegrid-col-past {
-  pointer-events: none !important;
-  opacity: 0.5 !important;
-  cursor: not-allowed !important;
-}
-.fc .fc-timegrid-col-past .fc-timegrid-axis-cushion,
-.fc .fc-timegrid-col-past .fc-daygrid-day-number {
-  color: #888 !important;
-}
 
 
 .fc-event, .fc-daygrid-event {
