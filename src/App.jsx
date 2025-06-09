@@ -778,6 +778,12 @@ const App = () => {
 
 
       {/* Calendar */}
+      <TodaysEventsModal
+  show={showTodaysModal}
+  eventsByTag={getTodayEventsByTag(events, tags)}
+  onClose={() => setShowTodaysModal(false)}
+/>
+
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
           events={events}
