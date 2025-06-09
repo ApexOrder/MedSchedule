@@ -207,14 +207,13 @@ function getTodayEventsByTag(events, tags) {
     setShowTodaysModal(true);
   }
 
-  // Fallback if you're also supporting Teams subEntityId
+  // Also support Teams subEntityId context
   app.getContext().then((context) => {
     if (context?.subEntityId === "showTodayEvents") {
       setShowTodaysModal(true);
     }
   });
 }, []);
-
 
 
   // Helper to check if a date is in the past
