@@ -735,21 +735,18 @@ try {
   eventsKey={eventsKey}
   debug={debug}
   eventDidMount={info => {
-  // Get data for the tooltip
   const title = info.event.title || "";
   const notes = info.event.extendedProps.notes || "";
-  const creator = info.event.extendedProps.createdBy || "";
+  const creator = info.event.extendedProps.createdByUser || "";
 
-  // Format for multi-line custom tooltip
   let tooltip = `${title}`;
   if (notes) tooltip += `\nNotes: ${notes}`;
   if (creator) tooltip += `\nCreator: ${creator}`;
 
   info.el.setAttribute("data-tooltip", tooltip);
-
-  // Remove the native browser tooltip
   info.el.removeAttribute("title");
 }}
+
 
 />
 
