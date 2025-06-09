@@ -30,6 +30,8 @@ const App = () => {
   const [isPastEvent, setIsPastEvent] = useState(false);
   const [channelId, setChannelId] = useState(null);
   const [showTagManager, setShowTagManager] = useState(false);
+  const [showTodaysModal, setShowTodaysModal] = useState(false);
+
 
   // Add lastEditedBy everywhere newEvent exists
   const [newEvent, setNewEvent] = useState({
