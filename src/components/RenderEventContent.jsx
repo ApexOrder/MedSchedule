@@ -3,7 +3,9 @@ import hexToRgb from "../utils/hexToRgb";
 function RenderEventContent(arg) {
   const tagColor = arg.event.extendedProps.tagColor || "#3b82f6";
   const title = arg.event.title;
-  const borderRadius = 18; // Adjust as needed to match pill shape
+  const completed = arg.event.extendedProps.completed;
+
+  const borderRadius = 18; // Adjust as needed
 
   return (
     <div
@@ -27,8 +29,8 @@ function RenderEventContent(arg) {
         cursor: "pointer",
         margin: "0 auto",
         transition: "box-shadow 0.18s, transform 0.18s, background 0.13s",
+        opacity: completed ? 0.6 : 1, // faded if completed
       }}
-      // <-- NO title prop here!
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow =
           tagColor.toLowerCase() === "#ffffff"
@@ -44,6 +46,22 @@ function RenderEventContent(arg) {
         e.currentTarget.style.transform = "scale(1)";
       }}
     >
+      {/* ✔️ icon for completed */}
+      {completed && (
+        <span
+          style={{
+            marginRight: 6,
+            color: "#3ecc59", // or your accent, or white if you prefer
+            fontWeight: 900,
+            fontSize: 16,
+            verticalAlign: "middle",
+            filter: "drop-shadow(0 0 1px #222)"
+          }}
+          title="Completed"
+        >
+          ✔️
+        </span>
+      )}
       {title}
     </div>
   );
