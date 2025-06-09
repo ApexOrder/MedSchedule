@@ -199,9 +199,6 @@ function getTodayEventsByTag(events, tags) {
       unsubscribeTags();
     };
   }, [channelId]);
- []);
-
-
 
   // Helper to check if a date is in the past
   const isPastDate = (dateStr) => {
