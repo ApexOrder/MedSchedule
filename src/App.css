@@ -9,7 +9,6 @@ body, #root, .App {
 .fc {
   background: #22242b !important;
   border-radius: 24px;
- /* box-shadow: 0 8px 32px 0 rgba(16,16,24,0.15);*/
   padding: 24px 8px;
 }
 
@@ -24,7 +23,6 @@ body, #root, .App {
   border: none !important;
   color: #181A20 !important;
   border-radius: 16px !important;
-/*  box-shadow: 0 2px 8px 0 rgba(255,145,0,0.18);*/
   transition: background 0.15s;
 }
 .fc .fc-button:hover, .fc-button-primary:hover {
@@ -41,7 +39,7 @@ body, #root, .App {
 .fc .fc-daygrid-day.fc-day-today,
 .fc .fc-timegrid-col.fc-day-today {
   background: #292929 !important;
-  box-shadow: 0 0 0 2px #ff9100 inset !important; /* <-- Add this line */
+  box-shadow: 0 0 0 2px #ff9100 inset !important;
 }
 
 /* Make past dates unclickable and faded */
@@ -56,28 +54,59 @@ body, #root, .App {
   color: #888 !important;
 }
 
-
-
+/* Event styling (all events) */
 .fc-event, .fc-daygrid-event {
-  /*background: #ff9100 !important;*/
+  position: relative; /* Required for tooltip */
   color: inherit !important;
   border: none !important;
   border-radius: 0px !important;
   font-weight: 600;
-  /*box-shadow: none;*/
   margin-bottom: 2px;
   padding: 2px 10px;
+  background: none !important;
+  z-index: 2;
   transition: background 0.15s;
 }
-.fc-event:hover, .fc-daygrid-event:hover {
-  /* No color or background change */
-  /*box-shadow: 0 4px 14px 0 rgba(255, 145, 0, 0.19), 0 2px 8px rgba(0,0,0,0.10);*/
-  transform: scale(1);
-  z-index: 2;
-  transition: box-shadow 0.13s, transform 0.13s;
+
+/* Custom tooltip styling for all events using data-tooltip attribute */
+.fc-event[data-tooltip]:hover::after,
+.fc-daygrid-event[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: 110%;
+  transform: translateX(-50%);
+  background: #23252c;
+  color: #ff9100;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px #0009;
+  z-index: 100;
+  white-space: pre-line;  /* allows line breaks */
+  pointer-events: none;
+  opacity: 0.97;
+  font-weight: 500;
+  transition: opacity 0.13s;
+  max-width: 260px;
+  overflow-wrap: break-word;
 }
 
+/* Arrow below the tooltip */
+.fc-event[data-tooltip]:hover::before,
+.fc-daygrid-event[data-tooltip]:hover::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 105%;
+  transform: translateX(-50%);
+  border-width: 8px 8px 0 8px;
+  border-style: solid;
+  border-color: #23252c transparent transparent transparent;
+  z-index: 101;
+}
 
+/* Day number (current/future) */
 .fc .fc-daygrid-day-number {
   color: #ff9100 !important;
   font-weight: 700;
@@ -100,49 +129,11 @@ body, #root, .App {
   font-weight: 600;
 }
 
-/* Custom tooltip styling for all events */
-.fc-event[data-tooltip]:hover::after,
-.fc-daygrid-event[data-tooltip]:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: 50%;
-  bottom: 110%;
-  transform: translateX(-50%);
-  background: #23252c;
-  color: #ff9100;
-  font-size: 13px;
-  padding: 10px 18px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px #0009;
-  z-index: 100;
-  white-space: pre-line;  /* allows line breaks */
-  pointer-events: none;
-  opacity: 0.97;
-  font-weight: 500;
-  transition: opacity 0.13s;
-}
-
-/* Optionally: add a little arrow below the tooltip */
-.fc-event[data-tooltip]:hover::before,
-.fc-daygrid-event[data-tooltip]:hover::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 105%;
-  transform: translateX(-50%);
-  border-width: 8px 8px 0 8px;
-  border-style: solid;
-  border-color: #23252c transparent transparent transparent;
-  z-index: 101;
-}
-
-
-/* Modal/dialog styles (example) */
+/* Modal/dialog styles */
 .modal, .modal-content {
   background: #23252c;
   color: #fff;
   border-radius: 24px;
- /* box-shadow: 0 6px 24px 0 rgba(16,16,24,0.24);*/
   padding: 28px 24px;
   border: none;
 }
@@ -167,7 +158,6 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border: 2px solid #ff9100;
- /* box-shadow: 0 0 0 2px #ff910040;*/
 }
 
 button, .btn, .fc-button {
@@ -180,7 +170,6 @@ button, .btn, .fc-button {
   font-weight: 600;
   margin-top: 8px;
   cursor: pointer;
- /* box-shadow: 0 2px 8px 0 rgba(255,145,0,0.12);*/
   transition: background 0.13s, box-shadow 0.12s;
 }
 button:hover, .btn:hover {
