@@ -19,9 +19,6 @@ const EventModal = ({
     <div
       className="modal-fade"
       style={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
         background: "#2d2d2d",
         padding: 20,
         borderRadius: 8,
