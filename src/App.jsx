@@ -44,6 +44,7 @@ const App = () => {
     originDate: "",
     tagName: null,
     channelId: null,
+    lastEdited: new Date().toISOString(),
   });
 
   const fetchAccessToken = async () => {
@@ -215,6 +216,7 @@ try {
       createdBy: user?.email || "unknown@example.com",
       createdByUser: user?.displayName || user?.username || "Unknown",
       createdAt,
+      lastEdited: new Date().toISOString(),
       originDate: info.dateStr,
       tagName: null,
       channelId,
@@ -301,6 +303,7 @@ try {
           createdBy: e.createdBy,
           createdAt: e.createdAt,
           channelId,
+          lastEdited: new Date().toISOString(),
         }));
       } else {
         newEvents = [
@@ -311,6 +314,7 @@ try {
             interval: isRecurring ? interval : 0,
             endDate: isRecurring ? endDate : "",
             channelId,
+            lastEdited: new Date().toISOString(),
           },
         ];
       }
@@ -330,6 +334,7 @@ try {
             endDate,
             createdBy: user?.email || "unknown@example.com",
             createdAt,
+            lastEdited: new Date().toISOString(),
             tagName,
             channelId,
           });
@@ -342,6 +347,7 @@ try {
             id: Math.random().toString(36).substr(2, 9),
             createdBy: user?.email || "unknown@example.com",
             createdAt: new Date().toISOString(),
+            lastEdited: new Date().toISOString(),
             originDate: "",
             channelId,
           },
@@ -367,6 +373,7 @@ try {
       createdBy: "",
       createdByUser: "",
       createdAt: "",
+      lastEdited: new Date().toISOString(),
       originDate: "",
       tagName: null,
       channelId: null,
