@@ -16,8 +16,8 @@ const App = () => {
   const [authDebug, setAuthDebug] = useState([]);
   const [showDebug, setShowDebug] = useState(false);
 
-  const [notificationDebug, setNotificationDebug] = useState([]); // NEW
-  const [fetchingNotifDebug, setFetchingNotifDebug] = useState(false); // NEW
+  const [notificationDebug, setNotificationDebug] = useState([]);
+  const [fetchingNotifDebug, setFetchingNotifDebug] = useState(false);
 
   const [events, setEvents] = useState([]);
   const [tags, setTags] = useState([]);
@@ -29,6 +29,7 @@ const App = () => {
   const [channelId, setChannelId] = useState(null);
   const [showTagManager, setShowTagManager] = useState(false);
 
+  // Add lastEditedBy everywhere newEvent exists
   const [newEvent, setNewEvent] = useState({
     id: null,
     title: "",
@@ -41,46 +42,46 @@ const App = () => {
     createdBy: "",
     createdByUser: "",
     createdAt: "",
+    lastEdited: new Date().toISOString(),
+    lastEditedBy: "",
     originDate: "",
     tagName: null,
     channelId: null,
-    lastEdited: new Date().toISOString(),
+    completed: false,
   });
 
   const fetchAccessToken = async () => {
-  const res = await fetch('/api/debugToken');
-  const data = await res.json();
-  if (data.access_token) {
-    debug("🔓 Current Graph access token:\n" + data.access_token);
-  } else {
-    debug("❌ Failed to get token: " + (data.error || "Unknown error"));
-  }
-};
-  
+    const res = await fetch('/api/debugToken');
+    const data = await res.json();
+    if (data.access_token) {
+      debug("🔓 Current Graph access token:\n" + data.access_token);
+    } else {
+      debug("❌ Failed to get token: " + (data.error || "Unknown error"));
+    }
+  };
+
   const eventsKey = useMemo(() => JSON.stringify(events), [events]);
   const debug = (msg) =>
     setAuthDebug((prev) => [...prev, typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)]);
 
-  // NEW: Function to fetch notification cron debug log
+  // Function to fetch notification cron debug log
   const fetchNotificationDebug = async () => {
     setFetchingNotifDebug(true);
     setNotificationDebug(["Fetching..."]);
     try {
       const res = await fetch("/api/sendNotifications");
-const text = await res.text();
-let data;
-try {
-  data = JSON.parse(text);
-  setNotificationDebug(data.debug || ["No debug info returned."]);
-} catch (e) {
-  // Not JSON (probably HTML error page)
-  setNotificationDebug([
-    `Fetch error: ${e.message}`,
-    "Raw response:",
-    text.slice(0, 1000) // Show only first 1000 chars for safety
-  ]);
-}
-
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+        setNotificationDebug(data.debug || ["No debug info returned."]);
+      } catch (e) {
+        setNotificationDebug([
+          `Fetch error: ${e.message}`,
+          "Raw response:",
+          text.slice(0, 1000)
+        ]);
+      }
     } catch (err) {
       setNotificationDebug([`Fetch error: ${err.message}`]);
     }
@@ -204,6 +205,7 @@ try {
     }
     debug("📅 Date clicked: " + info.dateStr);
     const createdAt = new Date().toISOString();
+    const editor = user?.displayName || user?.username || "Unknown";
     setNewEvent({
       id: null,
       title: "",
@@ -214,12 +216,14 @@ try {
       endDate: "",
       color: "#ffffff",
       createdBy: user?.email || "unknown@example.com",
-      createdByUser: user?.displayName || user?.username || "Unknown",
+      createdByUser: editor,
       createdAt,
       lastEdited: new Date().toISOString(),
+      lastEditedBy: editor,
       originDate: info.dateStr,
       tagName: null,
       channelId,
+      completed: false,
     });
     setSelectedEventId(null);
     setShowModal(true);
@@ -290,6 +294,8 @@ try {
         return;
       }
     }
+    const now = new Date().toISOString();
+    const editor = user?.displayName || user?.username || "Unknown";
     let newEvents = [];
     if (selectedEventId !== null) {
       if (editMode === "future" && originDate) {
@@ -303,7 +309,8 @@ try {
           createdBy: e.createdBy,
           createdAt: e.createdAt,
           channelId,
-          lastEdited: new Date().toISOString(),
+          lastEdited: now,
+          lastEditedBy: editor,
         }));
       } else {
         newEvents = [
@@ -314,7 +321,8 @@ try {
             interval: isRecurring ? interval : 0,
             endDate: isRecurring ? endDate : "",
             channelId,
-            lastEdited: new Date().toISOString(),
+            lastEdited: now,
+            lastEditedBy: editor,
           },
         ];
       }
@@ -326,7 +334,7 @@ try {
         while (start <= end) {
           newEvents.push({
             ...newEvent,
-            id: Math.random().toString(36).substr(2, 9), // unique enough for temp use
+            id: Math.random().toString(36).substr(2, 9),
             date: start.toISOString().split("T")[0],
             originDate: date,
             isRecurring: true,
@@ -334,7 +342,8 @@ try {
             endDate,
             createdBy: user?.email || "unknown@example.com",
             createdAt,
-            lastEdited: new Date().toISOString(),
+            lastEdited: now,
+            lastEditedBy: editor,
             tagName,
             channelId,
           });
@@ -346,8 +355,9 @@ try {
             ...newEvent,
             id: Math.random().toString(36).substr(2, 9),
             createdBy: user?.email || "unknown@example.com",
-            createdAt: new Date().toISOString(),
-            lastEdited: new Date().toISOString(),
+            createdAt: now,
+            lastEdited: now,
+            lastEditedBy: editor,
             originDate: "",
             channelId,
           },
@@ -374,9 +384,11 @@ try {
       createdByUser: "",
       createdAt: "",
       lastEdited: new Date().toISOString(),
+      lastEditedBy: "",
       originDate: "",
       tagName: null,
       channelId: null,
+      completed: false,
     });
     setSelectedEventId(null);
     setEditMode("single");
@@ -735,28 +747,23 @@ try {
       {/* Calendar */}
       <div style={{ margin: "0 auto", maxWidth: 1200 }}>
         <CalendarWrapper
-  events={events}
-  tags={tags}
-  handleDateClick={handleDateClick}
-  handleEventClick={handleEventClick}
-  eventsKey={eventsKey}
-  debug={debug}
-  eventDidMount={info => {
-  const title = info.event.title || "";
-  const notes = info.event.extendedProps.notes || "";
-  const creator = info.event.extendedProps.createdByUser || "";
-
-  let tooltip = `${title}`;
-  if (notes) tooltip += `\nNotes: ${notes}`;
-  if (creator) tooltip += `\nCreator: ${creator}`;
-
-  info.el.setAttribute("data-tooltip", tooltip);
-  info.el.removeAttribute("title");
-}}
-
-
-/>
-
+          events={events}
+          tags={tags}
+          handleDateClick={handleDateClick}
+          handleEventClick={handleEventClick}
+          eventsKey={eventsKey}
+          debug={debug}
+          eventDidMount={info => {
+            const title = info.event.title || "";
+            const notes = info.event.extendedProps.notes || "";
+            const creator = info.event.extendedProps.createdByUser || "";
+            let tooltip = `${title}`;
+            if (notes) tooltip += `\nNotes: ${notes}`;
+            if (creator) tooltip += `\nCreator: ${creator}`;
+            info.el.setAttribute("data-tooltip", tooltip);
+            info.el.removeAttribute("title");
+          }}
+        />
       </div>
     </div>
   );
