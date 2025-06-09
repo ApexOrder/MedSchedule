@@ -28,7 +28,7 @@ function RenderEventContent(arg) {
         margin: "0 auto",
         transition: "box-shadow 0.18s, transform 0.18s, background 0.13s",
       }}
-      title={`${title}\nTag: ${arg.event.extendedProps.tagName || "-"}\nNotes: ${arg.event.extendedProps.notes || "-"}\nCreator: ${arg.event.extendedProps.createdBy || "-"}`}
+      // <-- NO title prop here!
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow =
           tagColor.toLowerCase() === "#ffffff"
