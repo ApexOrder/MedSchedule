@@ -3,15 +3,8 @@ const { getFirestore } = require("firebase-admin/firestore");
 const axios = require("axios");
 
 if (!getApps().length) {
-  console.log("[INIT] Initializing Firebase app...");
-  initializeApp({
-    credential: cert(JSON.parse(process.env.FIREBASE_ADMIN_JSON)),
-  });
-  console.log("[INIT] Firebase app initialized.");
-} else {
-  console.log("[INIT] Firebase app already initialized.");
+  initializeApp({ credential: cert(JSON.parse(process.env.FIREBASE_ADMIN_JSON)) });
 }
-
 const db = getFirestore();
 
 const tenantId = process.env.MS_TENANT_ID;
@@ -24,14 +17,11 @@ async function getUserIdByEmail(email, token) {
     `https://graph.microsoft.com/v1.0/users?$filter=mail eq '${email}'`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (userRes.data.value.length === 0) {
-    throw new Error(`User not found in Azure AD for email: ${email}`);
-  }
+  if (userRes.data.value.length === 0) throw new Error(`User not found for email: ${email}`);
   return userRes.data.value[0].id;
 }
 
 async function getGraphToken() {
-  console.log("[TOKEN] Requesting Microsoft Graph token...");
   const response = await axios.post(
     `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
     new URLSearchParams({
@@ -41,106 +31,103 @@ async function getGraphToken() {
       scope: "https://graph.microsoft.com/.default",
     })
   );
-  console.log("[TOKEN] Token received.");
   return response.data.access_token;
 }
 
-async function sendTeamsNotification(userId, deepLink, eventTitle, eventNotes, token) {
-  const eventMsg = `Reminder: "${eventTitle}" scheduled today.` + (eventNotes ? `\nNotes: ${eventNotes}` : "");
-  console.log(`[NOTIFY] Sending Teams event notification to ${userId}: ${eventMsg}`);
+async function sendTeamsNotification(userId, deepLink, tag, eventsList, token) {
+  let message = `Events for tag: **${tag}**\n\n`;
+  eventsList.forEach(evt => {
+    message += `• **${evt.title}**${evt.notes ? `: ${evt.notes}` : ""}\n`;
+  });
+
   await axios.post(
     `https://graph.microsoft.com/v1.0/users/${userId}/teamwork/sendActivityNotification`,
     {
       topic: {
         source: "text",
-        value: "Care Calendar Event",
+        value: "Care Calendar Events",
         webUrl: deepLink,
       },
       activityType: "systemDefault",
-      previewText: { content: eventMsg },
+      previewText: { content: message },
       recipient: {
         "@odata.type": "microsoft.graph.aadUserNotificationRecipient",
         userId,
       },
-      templateParameters: [
-        {
-          name: "systemDefaultText",
-          value: eventMsg,
-        },
-      ],
+      templateParameters: [{ name: "systemDefaultText", value: message }],
     },
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  console.log("[NOTIFY] Event notification sent successfully!");
 }
 
 module.exports = async function handler(req, res) {
   const debug = [];
-  const now = new Date();
-  console.log(`[RUN] Handler started at ${now.toISOString()}`);
-
   try {
-    // Get today's date string (YYYY-MM-DD)
+    // Prepare date string
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split("T")[0];
     debug.push(`Checking for events on: ${todayStr}`);
 
-    // Query Firestore for today's events
-    const snapshot = await db
-      .collection("events")
-      .where("date", "==", todayStr)
-      .get();
-
+    // Query events for today
+    const snapshot = await db.collection("events").where("date", "==", todayStr).get();
     const events = [];
     snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
-
     debug.push(`Found ${events.length} event(s) for today.`);
+
+    // Group events by user and tag
+    // Structure: { [email]: { [tagName]: [events] } }
+    const grouped = {};
+    for (const evt of events) {
+      const email = evt.createdBy;
+      const tag = evt.tagName || "Untagged";
+      if (!email) continue;
+      if (!grouped[email]) grouped[email] = {};
+      if (!grouped[email][tag]) grouped[email][tag] = [];
+      grouped[email][tag].push(evt);
+    }
 
     let sentCount = 0;
     let errors = [];
-    const token = await getGraphToken(); // Only fetch ONCE per run
+    const token = await getGraphToken();
 
-    for (const event of events) {
+    for (const email of Object.keys(grouped)) {
+      let userId;
       try {
-        // Use 'createdBy' as the user's email (must exist in Azure AD)
-        const userEmail = event.createdBy;
-        if (!userEmail) {
-          throw new Error(`Event "${event.title}" is missing createdBy email.`);
-        }
-        const userId = await getUserIdByEmail(userEmail, token);
-
-        const deepLink =
-          "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc";
-
-        await sendTeamsNotification(userId, deepLink, event.title, event.notes || "", token);
-        debug.push(`✅ Notified "${event.title}" for ${userEmail}`);
-        sentCount++;
+        userId = await getUserIdByEmail(email, token);
       } catch (err) {
-        const errMsg = `❌ Failed "${event.title}": ${err.message}`;
-        debug.push(errMsg);
-        errors.push(errMsg);
-        console.error(errMsg, err);
+        debug.push(`❌ Could not get userId for ${email}: ${err.message}`);
+        errors.push(err.message);
+        continue;
+      }
+      for (const tag of Object.keys(grouped[email])) {
+        const eventsList = grouped[email][tag];
+        // Add your deepLink logic (customize as needed)
+        const deepLink = "https://teams.microsoft.com/l/entity/19901a37-647d-456a-a758-b3c58bc3120b/_djb2_msteams_prefix_3671250058?context=%7B%22channelId%22%3A%2219%3ARTtJikWB7NQj4ysOlIfpaFqP7DUlmKomPbEtfzIcAEs1%40thread.tacv2%22%7D&tenantId=a3fa1e2a-6173-409a-8f0d-35492b1e54cc";
+
+        try {
+          await sendTeamsNotification(userId, deepLink, tag, eventsList, token);
+          debug.push(`✅ Notified ${email} for tag "${tag}" with ${eventsList.length} event(s)`);
+          sentCount++;
+        } catch (err) {
+          const errMsg = `❌ Notification failed for ${email}, tag "${tag}": ${err.message}`;
+          debug.push(errMsg);
+          errors.push(errMsg);
+        }
       }
     }
 
-    debug.push(`Sent ${sentCount} notifications.`);
+    debug.push(`Sent ${sentCount} grouped notifications.`);
+    if (errors.length) debug.push("Errors:", ...errors);
 
-    if (errors.length) {
-      debug.push("Errors:");
-      debug.push(...errors);
-    }
-
-    console.log(`[END] Handler completed at ${new Date().toISOString()}`);
     res.status(200).json({
       debug,
-      status: `Notifications sent: ${sentCount}`,
+      status: `Grouped notifications sent: ${sentCount}`,
       time: new Date().toISOString(),
       errors,
     });
   } catch (error) {
-    debug.push(`❌ Error sending notification: ${error.message}`);
-    console.error(`[ERROR] Handler failed at ${new Date().toISOString()}:`, error);
+    debug.push(`❌ Error: ${error.message}`);
     res.status(500).json({ debug, error: error.message });
   }
 };
