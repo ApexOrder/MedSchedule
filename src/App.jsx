@@ -201,12 +201,20 @@ function getTodayEventsByTag(events, tags) {
   }, [channelId]);
 
   useEffect(() => {
-  // Open the modal if the query string has showTodayEvents
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("showTodayEvents")) {
+  const url = new URL(window.location.href);
+  const showToday = url.searchParams.get("showTodayEvents");
+  if (showToday) {
     setShowTodaysModal(true);
   }
+
+  // Fallback if you're also supporting Teams subEntityId
+  app.getContext().then((context) => {
+    if (context?.subEntityId === "showTodayEvents") {
+      setShowTodaysModal(true);
+    }
+  });
 }, []);
+
 
 
   // Helper to check if a date is in the past
