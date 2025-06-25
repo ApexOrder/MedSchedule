@@ -2,7 +2,7 @@ name: Scheduled Notification
 
 on:
   schedule:
-    - cron: '15 * * * *'
+    - cron: '0 10 * * *'
 
   workflow_dispatch:    # Allow manual runs too
 
